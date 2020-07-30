@@ -1,0 +1,31 @@
+#!/usr/bin/with-contenv bash
+
+if [[ "${TC_AUTHSERVER}" == "true" ]]; then
+	echo "[***] AUTHSERVER is enabled"
+	if [[ -e /etc/services.d/authserver/down ]]; then
+		rm /etc/services.d/authserver/down
+	fi
+	if [[ ! -e "/config/${TC_AUTHSERVER_CONFIGFILE}" ]]; then
+		cp /tc/etc/authserver.conf.dist "/config/${TC_AUTHSERVER_CONFIGFILE}"
+	fi
+else
+	touch /etc/services.d/authserver/down
+fi
+
+if [[ "${TC_WORLDSERVER}" == "true" ]]; then
+	echo "[***] WORLDSERVER is enabled"
+	if [[ -e /etc/services.d/worldserver/down ]]; then
+		rm /etc/services.d/worldserver/down
+	fi
+	if [[ ! -e "/config/${TC_WORLDSERVER_CONFIGFILE}" ]]; then
+		cp /tc/etc/worldserver.conf.dist "/config/${TC_WORLDSERVER_CONFIGFILE}"
+	fi
+else
+	touch /etc/services.d/worldserver/down
+fi
+
+for x in "/config/${TC_AUTHSERVER_CONFIGFILE}" "/config/${TC_WORLDSERVER_CONFIGFILE}"; do
+	if [[ -e ${x} ]]; then
+		sed -i 's#^SourceDirectory .*#SourceDirectory = "/TrinityCore"#g' ${x}
+	fi
+done
