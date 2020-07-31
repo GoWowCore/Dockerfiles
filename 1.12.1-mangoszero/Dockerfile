@@ -16,27 +16,29 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
     update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang 100
 ## mangoszero:1.12.1 - end
 
+ARG MANGOS_FAMILY
+
 ## mangoszero:1.12.1 - start
 RUN \
-    mkdir /zero && \
-    git clone --single-branch --recursive --depth 1 https://github.com/mangoszero/server.git /zero/server && \
-    git clone --single-branch --recursive --depth 1 https://github.com/mangoszero/database.git /zero/db
+    mkdir /${MANGOS_FAMILY} && \
+    git clone --single-branch --recursive --depth 1 https://github.com/mangos${MANGOS_FAMILY}/server.git /${MANGOS_FAMILY}/server && \
+    git clone --single-branch --recursive --depth 1 https://github.com/mangos${MANGOS_FAMILY}/database.git /${MANGOS_FAMILY}/db
 ## mangoszero:1.12.1 - end
 
 ## mangoszero:1.12.1 - start
-RUN mkdir /zero/build
-WORKDIR /zero/build
+RUN mkdir /${MANGOS_FAMILY}/build
+WORKDIR /${MANGOS_FAMILY}/build
 ## mangoszero:1.12.1 - end
 
 ## mangoszero:1.12.1 - start
 RUN cmake ../server/ -DCMAKE_INSTALL_PREFIX=/mangos -DCONF_INSTALL_DIR=/mangos/etc
 RUN make -j $(nproc)
 RUN make install
-RUN cd /zero/server && git rev-parse --short HEAD > /mangos/.commit
+RUN cd /${MANGOS_FAMILY}/server && git rev-parse --short HEAD > /mangos/.commit
 RUN \
     cd / && \
-    rm -R /zero/build && \
-    rm -R /zero/server/.git /zero/db/.git
+    rm -R /${MANGOS_FAMILY}/build && \
+    rm -R /${MANGOS_FAMILY}/server/.git /${MANGOS_FAMILY}/db/.git
 ## mangoszero:1.12.1 - end
 
 
@@ -55,11 +57,12 @@ ENV \
     M_MANGOSD_ICON="0" \
     M_MANGOSD_TZ="0" \
     M_MANGOSD_MINSECURITY="0" \
-    M_MANGOSD_REALMBUILD="5875"
+    M_MANGOSD_REALMBUILD="5875" \
+    MANGOS_FAMILY="${MANGOS_FAMILY}"
 
 ## mangoszero:1.12.1 - start
 COPY --from=build /mangos /mangos
-COPY --from=build /zero /zero
+COPY --from=build /${MANGOS_FAMILY} /${MANGOS_FAMILY}
 RUN \
     apt-get -y update && \
     apt-get -y install \
@@ -71,6 +74,6 @@ RUN \
     apt-get clean autoclean && \
     apt-get autoremove --yes && \
     rm -rf /var/lib/apt/lists/* && \
-    chown -R abc:abc /mangos /zero
+    chown -R abc:abc /mangos /${MANGOS_FAMILY}
 COPY s6/ /
 ## mangoszero:1.12.1 - end

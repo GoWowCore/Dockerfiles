@@ -17,6 +17,8 @@ services:
     build:
       context: "."
       dockerfile: "Dockerfile"
+      args:
+        MANGOS_FAMILY: zero
     image: "mangoszero-realmd-1.12.1:latest"
     restart: always
     depends_on:
@@ -36,6 +38,8 @@ services:
     build:
       context: "."
       dockerfile: "Dockerfile"
+      args:
+        MANGOS_FAMILY: zero
     image: "mangoszero-mangosd-1.12.1:latest"
     restart: always
     depends_on:
@@ -70,6 +74,8 @@ services:
     build:
       context: "."
       dockerfile: "Dockerfile"
+      args:
+        MANGOS_FAMILY: zero
     image: "mangoszero-mangosd-1.12.1:latest"
     restart: always
     depends_on:

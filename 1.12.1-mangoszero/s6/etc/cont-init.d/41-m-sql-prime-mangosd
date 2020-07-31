@@ -51,7 +51,7 @@ M_MANGOSD_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${
 sed -i "s/^RealmID .*/RealmID = ${M_MANGOSD_REALMID}/g" "/config/${M_MANGOSD_CONFIGFILE}"
 
 # Install mangosd character and world DB's if not exists
-for entry in 'WorldDatabaseInfo,/zero/db/World/Setup/mangosdLoadDB.sql' 'CharacterDatabaseInfo,/zero/db/Character/Setup/characterLoadDB.sql'; do
+for entry in 'WorldDatabaseInfo,db/World/Setup/mangosdLoadDB.sql' 'CharacterDatabaseInfo,db/Character/Setup/characterLoadDB.sql'; do
 	SQL_CONFIG=$(awk "/^${entry%,*}/{print \$NF}" "/config/${M_MANGOSD_CONFIGFILE}")
 	regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
 	if [[ ${SQL_CONFIG} =~ $regex ]]; then
@@ -63,9 +63,9 @@ for entry in 'WorldDatabaseInfo,/zero/db/World/Setup/mangosdLoadDB.sql' 'Charact
 
 		if [[ $(userSQL "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
 			echo "[***] ${entry%,*} SQL - db_version table not detected. Installing DB"
-			userSQLFile "${entry#*,}"
+			userSQLFile "/${MANGOS_FAMILY}/${entry#*,}"
 			if [[ "${entry%,*}" == "WorldDatabaseInfo" ]]; then
-				for x in $(ls -1 /zero/db/World/Setup/FullDB/*.sql); do
+				for x in $(ls -1 /${MANGOS_FAMILY}/db/World/Setup/FullDB/*.sql); do
 					userSQLFile "${x}"
 				done
 			fi
@@ -73,7 +73,7 @@ for entry in 'WorldDatabaseInfo,/zero/db/World/Setup/mangosdLoadDB.sql' 'Charact
 		DB_VERSION=$(userSQL "SELECT MAX(\`version\`) AS latest FROM \`db_version\`;")
 		echo "[***] ${entry%,*} SQL - Current DB version is ${DB_VERSION}"
 		# Update DB if out of date
-		REL_VERSION=$(awk -F '=' '/^RELEASE=/{print $NF}' /zero/db/InstallDatabases.sh | tr -d '"')
+		REL_VERSION=$(awk -F '=' '/^RELEASE=/{print $NF}' /${MANGOS_FAMILY}/db/InstallDatabases.sh | tr -d '"')
 		echo "[***] ${entry%,*} DB - Version detected in files is ${REL_VERSION}"
 		#TODO: Handle DB updates properly
 		echo "[***] TODO: Handle DB updates properly"

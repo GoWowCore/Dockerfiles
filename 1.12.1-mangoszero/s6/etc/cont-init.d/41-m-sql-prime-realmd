@@ -18,14 +18,14 @@ function userSQLFile {
 # Install realmDB if not exists
 if [[ $(userSQL "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
 	echo "[***] realmd SQL - db_version table not detected. Installing realmd DB"
-	userSQLFile "/zero/db/Realm/Setup/realmdLoadDB.sql"
+	userSQLFile "/${MANGOS_FAMILY}/db/Realm/Setup/realmdLoadDB.sql"
 fi
 
 DB_VERSION=$(userSQL "SELECT MAX(\`version\`) AS latest FROM \`db_version\`;")
 echo "[***] realmd SQL - Current DB version is ${DB_VERSION}"
 
 # Update realmDB if out of date
-REL_VERSION=$(awk -F '=' '/^RELEASE=/{print $NF}' /zero/db/InstallDatabases.sh | tr -d '"')
+REL_VERSION=$(awk -F '=' '/^RELEASE=/{print $NF}' /${MANGOS_FAMILY}/db/InstallDatabases.sh | tr -d '"')
 echo "[***] realm DB - Version detected in files is ${REL_VERSION}"
 # TODO: Handle realmdb updates properly
 echo "[***] TODO: Handle DB updates properly"
