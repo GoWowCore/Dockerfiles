@@ -1,0 +1,135 @@
+#!/usr/bin/with-contenv bash
+# Exit if worldserver is not enabled
+if [[ "${M_MANGOSD}" != "true" ]]; then
+	exit 0
+fi
+
+# Useful sql functions
+function rootSQL {
+	QUERY="${@}"
+	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "root" "-p${MYSQL_ROOT_PASSWORD}" -BNe "${QUERY}"
+}
+function userSQL {
+	QUERY="${@}"
+	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "${SQL_USER}" "-p${SQL_PASSWORD}" "${SQL_DB}" -BNe "${QUERY}"
+}
+
+DB_CONFIG=(
+	'LoginDatabaseInfo'
+	'CharacterDatabaseInfo'
+	'WorldDatabaseInfo'
+)
+
+if [[ -z "${MYSQL_ROOT_PASSWORD}" ]]; then
+	echo "[***] MySQL root password was not supplied. Assuming SQL credentials are valid and database was created."
+else
+	# Ensure DBs exist and user can be created
+	for CONFIG_KEY in ${DB_CONFIG[@]}; do
+		SQL_CONFIG=$(awk "/^${CONFIG_KEY}/{print \$NF}" "/config/${M_MANGOSD_CONFIGFILE}")
+		regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
+		if [[ ${SQL_CONFIG} =~ $regex ]]; then
+			SQL_HOSTNAME=${BASH_REMATCH[1]}
+			SQL_PORT=${BASH_REMATCH[2]}
+			SQL_USER=${BASH_REMATCH[3]}
+			SQL_PASSWORD=${BASH_REMATCH[4]}
+			SQL_DB=${BASH_REMATCH[5]}
+
+			# Wait for 10 minutes for SQL to come up
+			echo "[***] Waiting for SQL server to come up."
+			timeout 600 sh -c 'until nc -z $0 $1; do sleep 1; done' "${SQL_HOSTNAME}" "${SQL_PORT}"
+			if [[ $? -ne 0 ]]; then
+				echo "[***] ERROR: MySQL Server did not respond within 10 minutes."
+				exit 1
+			fi
+			echo "[***] MySQL is up (${CONFIG_KEY})"
+			sleep 5s
+
+			# Create auth database per settings file
+			rootSQL "CREATE DATABASE IF NOT EXISTS \`${SQL_DB}\` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;"
+			# Create user credentials per settings file
+			rootSQL "CREATE USER IF NOT EXISTS '${SQL_USER}'@'%' IDENTIFIED BY '${SQL_PASSWORD}' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;"
+			# Grant user usage from any source
+			rootSQL "GRANT USAGE ON *.* TO '${SQL_USER}'@'%';"
+			# Grant privileges of user to database
+			rootSQL "GRANT ALL PRIVILEGES ON \`${SQL_DB}\`.* TO '${SQL_USER}'@'%' WITH GRANT OPTION;"
+		else
+			echo "[***] ERROR: Somehow ${CONFIG_KEY} in '/config/${M_MANGOSD_CONFIGFILE}' was not formatted as 'hostname;port;user;password;database'."
+			exit 1
+		fi
+
+	done
+fi
+
+## Sync realm to realmlist
+# ASSUMES REALMD HAS POPULATED AUTH DB
+# Reload AUTH DB config
+SQL_CONFIG=$(awk '/^LoginDatabaseInfo/{print $NF}' "/config/${M_MANGOSD_CONFIGFILE}")
+regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
+if [[ ${SQL_CONFIG} =~ $regex ]]; then
+	SQL_HOSTNAME=${BASH_REMATCH[1]}
+	SQL_PORT=${BASH_REMATCH[2]}
+	SQL_USER=${BASH_REMATCH[3]}
+	SQL_PASSWORD=${BASH_REMATCH[4]}
+	SQL_DB=${BASH_REMATCH[5]}
+else
+	echo "[***] That was weird, couldn't get SQL credentials from worldserver config file. I had it before."
+	exit 1
+fi
+
+# Wait for tables to be created
+for table in 'realmlist'; do
+	while [[ $(userSQL "SHOW TABLES LIKE '${table}';" | wc -l) -eq 0 ]]; do
+		sleep 1s
+	done
+done
+
+# Sync this realm into the realmlist
+if [[ -z "${M_MANGOSD_REALMID}" ]]; then
+	M_MANGOSD_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${M_MANGOSD_NAME}';")
+fi
+if [[ -n "${M_MANGOSD_REALMID}" ]]; then
+	userSQL "REPLACE INTO \`realmlist\` (\`id\`,\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`realmbuilds\`) VALUES (${M_MANGOSD_REALMID}, '${M_MANGOSD_NAME}', '${M_MANGOSD_ADDRESS}', ${M_MANGOSD_PORT}, ${M_MANGOSD_ICON}, ${M_MANGOSD_TZ}, ${M_MANGOSD_MINSECURITY}, ${M_MANGOSD_REALMBUILD});"
+else
+	userSQL "REPLACE INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`realmbuilds\`) VALUES ('${M_MANGOSD_NAME}','${M_MANGOSD_ADDRESS}', ${M_MANGOSD_PORT}, ${M_MANGOSD_ICON}, ${M_MANGOSD_TZ}, ${M_MANGOSD_MINSECURITY}, ${M_MANGOSD_REALMBUILD});"
+fi
+
+M_MANGOSD_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${M_MANGOSD_NAME}';")
+sed -i "s/^RealmID .*/RealmID = ${M_MANGOSD_REALMID}/g" "/config/${M_MANGOSD_CONFIGFILE}"
+
+# Install mangosd character and world DB's if not exists
+for entry in 'WorldDatabaseInfo,/zero/db/World/Setup/mangosdLoadDB.sql' 'CharacterDatabaseInfo,/zero/db/Character/Setup/characterLoadDB.sql'; do
+	SQL_CONFIG=$(awk "/^${entry%,*}/{print \$NF}" "/config/${M_MANGOSD_CONFIGFILE}")
+	regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
+	if [[ ${SQL_CONFIG} =~ $regex ]]; then
+		SQL_HOSTNAME=${BASH_REMATCH[1]}
+		SQL_PORT=${BASH_REMATCH[2]}
+		SQL_USER=${BASH_REMATCH[3]}
+		SQL_PASSWORD=${BASH_REMATCH[4]}
+		SQL_DB=${BASH_REMATCH[5]}
+
+		if [[ $(userSQL "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
+			echo "[***] ${entry%,*} SQL - db_version table not detected. Installing DB"
+			userSQLFile "${entry#*,}"
+			if [[ "${entry%,*}" == "WorldDatabaseInfo" ]]; then
+				for x in $(ls -1 /zero/db/World/Setup/FullDB/*.sql); do
+					userSQLFile "${x}"
+				done
+			fi
+		fi
+		DB_VERSION=$(userSQL "SELECT MAX(\`version\`) AS latest FROM \`db_version\`;")
+		echo "[***] ${entry%,*} SQL - Current DB version is ${DB_VERSION}"
+		# Update DB if out of date
+		REL_VERSION=$(awk -F '=' '/^RELEASE=/{print $NF}' /zero/db/InstallDatabases.sh | tr -d '"')
+		echo "[***] ${entry%,*} DB - Version detected in files is ${REL_VERSION}"
+		#TODO: Handle DB updates properly
+		echo "[***] TODO: Handle DB updates properly"
+		if [[ "${REL_VERSION}" != "Rel${DB_VERSION}" ]]; then
+			echo "[***] realm DB: Exiting because DB version doesn't match expended version, and I haven't automated this part yet."
+			exit 1
+		fi
+	else
+		echo "[***] ERROR: Somehow ${entry%,*} in '/config/${M_MANGOSD_CONFIGFILE}' was not formatted as 'hostname;port;user;password;database'."
+		echo "[***] ERROR: THIS IS WEIRD, IT WAS FORMATTED RIGHT BEFORE!"
+		exit 1
+	fi
+done

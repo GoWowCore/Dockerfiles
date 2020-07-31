@@ -1,0 +1,99 @@
+#!/usr/bin/with-contenv bash
+# Exit if authserver is not enabled
+if [[ "${M_REALMD}" != "true" ]]; then
+	exit 0
+fi
+
+# Useful sql functions
+function rootSQL {
+	QUERY="${@}"
+	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "root" "-p${MYSQL_ROOT_PASSWORD}" -BNe "${QUERY}"
+}
+function userSQL {
+	QUERY="${@}"
+	(>&2 echo "DEBUGSQL: ${QUERY}")
+	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "${SQL_USER}" "-p${SQL_PASSWORD}" "${SQL_DB}" -BNe "${QUERY}"
+}
+function userSQLFile {
+	FILEPATH="${@}"
+	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "${SQL_USER}" "-p${SQL_PASSWORD}" -q -s "${SQL_DB}" < "${FILEPATH}"
+}
+
+# Wait for SQL to come up and pre-create the database and user if we need to
+if [[ -z "${MYSQL_ROOT_PASSWORD}" ]]; then
+	echo "[***] MySQL root password was not supplied. Assuming authserver SQL credentials are valid and database was created."
+else
+	# Handle necessary SQL DB and User creation
+	SQL_CONFIG=$(awk '/^LoginDatabaseInfo/{print $NF}' "/config/${M_REALMD_CONFIGFILE}")
+	regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
+	if [[ ${SQL_CONFIG} =~ $regex ]]; then
+		SQL_HOSTNAME=${BASH_REMATCH[1]}
+		SQL_PORT=${BASH_REMATCH[2]}
+		SQL_USER=${BASH_REMATCH[3]}
+		SQL_PASSWORD=${BASH_REMATCH[4]}
+		SQL_DB=${BASH_REMATCH[5]}
+
+		# Wait for 10 minutes for SQL to come up
+		echo "[***] Waiting for SQL server to come up."
+		timeout 600 sh -c 'until nc -z $0 $1; do sleep 1; done' "${SQL_HOSTNAME}" "${SQL_PORT}"
+		if [[ $? -ne 0 ]]; then
+			echo "[***] ERROR: MySQL Server did not respond within 10 minutes."
+			exit 1
+		fi
+		echo "[***] MySQL is up"
+		sleep 5s
+
+		# Create auth database per settings file
+		rootSQL "CREATE DATABASE IF NOT EXISTS \`${SQL_DB}\` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;"
+		# Create user credentials per settings file
+		rootSQL "CREATE USER IF NOT EXISTS '${SQL_USER}'@'%' IDENTIFIED BY '${SQL_PASSWORD}' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;"
+		# Grant user usage from any source
+		rootSQL "GRANT USAGE ON *.* TO '${SQL_USER}'@'%';"
+		# Grant privileges of user to database
+		rootSQL "GRANT ALL PRIVILEGES ON \`${SQL_DB}\`.* TO '${SQL_USER}'@'%' WITH GRANT OPTION;"
+	else
+		echo "[***] ERROR: Somehow LoginDatabaseInfo in '/config/${M_REALMD_CONFIGFILE}' was not formatted as 'hostname;port;user;password;database'."
+		exit 1
+	fi
+fi
+
+# Install realmDB if not exists
+if [[ $(userSQL "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
+	echo "[***] realmd SQL - db_version table not detected. Installing realmd DB"
+	userSQLFile "/zero/db/Realm/Setup/realmdLoadDB.sql"
+fi
+
+DB_VERSION=$(userSQL "SELECT MAX(\`version\`) AS latest FROM \`db_version\`;")
+echo "[***] realmd SQL - Current DB version is ${DB_VERSION}"
+
+# Update realmDB if out of date
+REL_VERSION=$(awk -F '=' '/^RELEASE=/{print $NF}' /zero/db/InstallDatabases.sh | tr -d '"')
+echo "[***] realm DB - Version detected in files is ${REL_VERSION}"
+# TODO: Handle realmdb updates properly
+echo "[***] TODO: Handle DB updates properly"
+if [[ "${REL_VERSION}" != "Rel${DB_VERSION}" ]]; then
+	echo "[***] realm DB: Exiting because DB version doesn't match expended version, and I haven't automated this part yet."
+	exit 1
+fi
+
+if [[ $(userSQL "SELECT COUNT(\`id\`) FROM \`realmlist\`;") -eq 0 ]]; then
+	# realmd won't start if the realmlist table is empty
+	userSQL "INSERT INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`realmflags\`,\`allowedSecurityLevel\`) VALUES ('Realms Pending','127.0.0.100','1234',2,3);"
+elif [[ $(userSQL "SELECT COUNT(\`id\`) FROM \`realmlist\`;") -gt 1 ]]; then
+	# Get rid of this realm if another exists
+	usersql "DELETE FROM \`realmlist\` WHERE \`name\`='Realms Pending' AND \`realmbuilds\`='';"
+fi
+
+# Clean mangos default users
+for entry in '1,ADMINISTRATOR,a34b29541b87b7e4823683ce6c7bf6ae68beaaac' '2,GAMEMASTER,7841e21831d7c6bc0b57fbe7151eb82bd65ea1f9' '3,MODERATOR,a7f5fbff0b4eec2d6b6e78e38e8312e64d700008' '4,PLAYER,3ce8a96d17c5ae88a30681024e86279f1a38c041'; do
+	regex="^([^,]+),([^,]+),([^,]+)"
+	if [[ ${entry} =~ $regex ]]; then
+		U_ID=${BASH_REMATCH[1]}
+		U_NAME=${BASH_REMATCH[2]}
+		U_HASH=${BASH_REMATCH[3]}
+		userSQL "DELETE FROM \`account\` WHERE \`id\`=${U_ID} AND \`username\`='${U_NAME}' AND \`sha_pass_hash\`='${U_HASH}' AND \`sessionkey\`='' AND \`last_login\`='';"
+	fi
+done
+
+# Add our default user
+userSQL "INSERT IGNORE INTO \`account\` (\`id\`, \`username\`, \`sha_pass_hash\`, \`gmlevel\`, \`expansion\`) VALUES (1, 'admin', SHA1(CONCAT(UPPER('admin'), ':', UPPER('admin'))), 3, 0);"

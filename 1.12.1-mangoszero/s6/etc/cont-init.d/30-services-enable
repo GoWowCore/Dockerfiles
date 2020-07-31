@@ -1,0 +1,34 @@
+#!/usr/bin/with-contenv bash
+
+if [[ "${M_REALMD}" == "true" ]]; then
+	echo "[***] REALMD is enabled"
+	if [[ -e /etc/services.d/realmd/down ]]; then
+		rm /etc/services.d/realmd/down
+	fi
+	if [[ ! -e "/config/${M_REALMD_CONFIGFILE}" ]]; then
+		cp /mangos/etc/realmd.conf.dist "/config/${M_REALMD_CONFIGFILE}"
+	fi
+else
+	touch /etc/services.d/realmd/down
+fi
+
+if [[ "${M_MANGOSD}" == "true" ]]; then
+	echo "[***] MANGOSD is enabled"
+	if [[ -e /etc/services.d/mangosd/down ]]; then
+		rm /etc/services.d/mangosd/down
+	fi
+	if [[ ! -e "/config/${M_MANGOSD_CONFIGFILE}" ]]; then
+		cp /mangos/etc/mangosd.conf.dist "/config/${M_MANGOSD_CONFIGFILE}"
+	fi
+	if [[ ! -e "/config/${M_MANGOSD_AH_CONFIGFILE}" ]]; then
+		cp /mangos/etc/ahbot.conf.dist "/config/${M_MANGOSD_AH_CONFIGFILE}"
+	fi
+else
+	touch /etc/services.d/mangosd/down
+fi
+
+#for x in "/config/${M_REALMD_CONFIGFILE}" "/config/${M_MANGOSD_CONFIGFILE}"; do
+#	if [[ -e ${x} ]]; then
+#		sed -i 's#^SourceDirectory .*#SourceDirectory = "/TrinityCore"#g' ${x}
+#	fi
+#done
