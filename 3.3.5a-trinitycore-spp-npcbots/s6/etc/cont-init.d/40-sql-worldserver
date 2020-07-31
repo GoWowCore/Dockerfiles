@@ -1,0 +1,96 @@
+#!/usr/bin/with-contenv bash
+# Exit if worldserver is not enabled
+if [[ "${TC_WORLDSERVER}" != "true" ]]; then
+	exit 0
+fi
+
+# Useful sql functions
+function rootSQL {
+	QUERY="${@}"
+	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "root" "-p${MYSQL_ROOT_PASSWORD}" -BNe "${QUERY}"
+}
+function userSQL {
+	QUERY="${@}"
+	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "${SQL_USER}" "-p${SQL_PASSWORD}" "${SQL_DB}" -BNe "${QUERY}"
+}
+
+DB_CONFIG=(
+	'LoginDatabaseInfo'
+	'CharacterDatabaseInfo'
+	'WorldDatabaseInfo'
+)
+
+if [[ -z "${MYSQL_ROOT_PASSWORD}" ]]; then
+	echo "[***] MySQL root password was not supplied. Assuming SQL credentials are valid and database was created."
+else
+	# Ensure DBs exist and user can be created
+	for CONFIG_KEY in ${DB_CONFIG[@]}; do
+		SQL_CONFIG=$(awk "/^${CONFIG_KEY}/{print \$NF}" "/config/${TC_WORLDSERVER_CONFIGFILE}")
+		regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
+		if [[ ${SQL_CONFIG} =~ $regex ]]; then
+			SQL_HOSTNAME=${BASH_REMATCH[1]}
+			SQL_PORT=${BASH_REMATCH[2]}
+			SQL_USER=${BASH_REMATCH[3]}
+			SQL_PASSWORD=${BASH_REMATCH[4]}
+			SQL_DB=${BASH_REMATCH[5]}
+
+			# Wait for 10 minutes for SQL to come up
+			echo "[***] Waiting for SQL server to come up."
+			timeout 600 sh -c 'until nc -z $0 $1; do sleep 1; done' "${SQL_HOSTNAME}" "${SQL_PORT}"
+			if [[ $? -ne 0 ]]; then
+				echo "[***] ERROR: MySQL Server did not respond within 10 minutes."
+				exit 1
+			fi
+			echo "[***] MySQL is up (${CONFIG_KEY})"
+			sleep 5s
+
+			# Create auth database per settings file
+			rootSQL "CREATE DATABASE IF NOT EXISTS \`${SQL_DB}\` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;"
+			# Create user credentials per settings file
+			rootSQL "CREATE USER IF NOT EXISTS '${SQL_USER}'@'%' IDENTIFIED BY '${SQL_PASSWORD}' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0;"
+			# Grant user usage from any source
+			rootSQL "GRANT USAGE ON *.* TO '${SQL_USER}'@'%';"
+			# Grant privileges of user to database
+			rootSQL "GRANT ALL PRIVILEGES ON \`${SQL_DB}\`.* TO '${SQL_USER}'@'%' WITH GRANT OPTION;"
+		else
+			echo "[***] ERROR: Somehow ${CONFIG_KEY} in '/config/${TC_WORLDSERVER_CONFIGFILE}' was not formatted as 'hostname;port;user;password;database'."
+			exit 1
+		fi
+
+	done
+fi
+
+## Sync realm to realmlist
+# ASSUMES AUTHSERVER HAS POPULATED AUTH DB
+# Reload AUTH DB config
+SQL_CONFIG=$(awk '/^LoginDatabaseInfo/{print $NF}' "/config/${TC_WORLDSERVER_CONFIGFILE}")
+regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
+if [[ ${SQL_CONFIG} =~ $regex ]]; then
+	SQL_HOSTNAME=${BASH_REMATCH[1]}
+	SQL_PORT=${BASH_REMATCH[2]}
+	SQL_USER=${BASH_REMATCH[3]}
+	SQL_PASSWORD=${BASH_REMATCH[4]}
+	SQL_DB=${BASH_REMATCH[5]}
+else
+	echo "[***] That was weird, couldn't get SQL credentials from worldserver config file. I had it before."
+	exit 1
+fi
+
+# Wait for tables to be created
+for table in 'realmlist'; do
+	while [[ $(userSQL "SHOW TABLES LIKE '${table}';" | wc -l) -eq 0 ]]; do
+		sleep 1s
+	done
+done
+
+# TODO: Sync this realm into the realmlist
+if [[ -z "${TC_WORLDSERVER_REALMID}" ]]; then
+	TC_WORLDSERVER_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${TC_WORLDSERVER_NAME}';")
+fi
+if [[ -n "${TC_WORLDSERVER_REALMID}" ]]; then
+	userSQL "REPLACE INTO \`realmlist\` (\`id\`,\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES (${TC_WORLDSERVER_REALMID}, '${TC_WORLDSERVER_NAME}', '${TC_WORLDSERVER_ADDRESS}', ${TC_WORLDSERVER_PORT}, ${TC_WORLDSERVER_ICON}, ${TC_WORLDSERVER_TZ}, ${TC_WORLDSERVER_MINSECURITY}, ${TC_WORLDSERVER_GAMEBUILD});"
+else
+	userSQL "REPLACE INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES ('${TC_WORLDSERVER_NAME}','${TC_WORLDSERVER_ADDRESS}', ${TC_WORLDSERVER_PORT}, ${TC_WORLDSERVER_ICON}, ${TC_WORLDSERVER_TZ}, ${TC_WORLDSERVER_MINSECURITY}, ${TC_WORLDSERVER_GAMEBUILD});"
+fi
+TC_WORLDSERVER_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${TC_WORLDSERVER_NAME}';")
+sed -i "s/^RealmID .*/RealmID = ${TC_WORLDSERVER_REALMID}/g" "/config/${TC_WORLDSERVER_CONFIGFILE}"
