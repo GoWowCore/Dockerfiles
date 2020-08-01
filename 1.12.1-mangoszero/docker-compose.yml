@@ -85,7 +85,7 @@ services:
     - "7879:7879"
     volumes:
     - "./config.mangosd:/config"
-    - "./wow-1.12.1:/wow"
+#    - "./wow-1.12.1:/wow"
     environment:
       MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
       M_MANGOSD_CONFIGFILE: "mangosd2.conf"
