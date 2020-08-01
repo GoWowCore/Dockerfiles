@@ -26,9 +26,3 @@ if [[ "${M_MANGOSD}" == "true" ]]; then
 else
 	touch /etc/services.d/mangosd/down
 fi
-
-#for x in "/config/${M_REALMD_CONFIGFILE}" "/config/${M_MANGOSD_CONFIGFILE}"; do
-#	if [[ -e ${x} ]]; then
-#		sed -i 's#^SourceDirectory .*#SourceDirectory = "/TrinityCore"#g' ${x}
-#	fi
-#done

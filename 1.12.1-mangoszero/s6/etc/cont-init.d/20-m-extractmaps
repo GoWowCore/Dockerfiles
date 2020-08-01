@@ -13,31 +13,42 @@ fi
 if [[ ! -d /config/dbc || ! -d /config/maps ]]; then
 	echo "[***] DBC and Maps: generating files"
 	cd /wow
-	/mangos/bin/mapextractor
+	/mangos/bin/tools/map-extractor
 	cp -r dbc maps /config
+
 	echo "[***] DBC and Maps: complete"
+	rm -R /wow/dbc /wow/maps
 fi
 
 if [[ ! -d /config/vmaps ]]; then
 	echo "[***] Visual maps: generating files"
 	cd /wow
-	/mangos/bin/vmap4extractor
-	mkdir vmaps
-	/mangos/bin/vmap4assembler Buildings vmaps
+	/mangos/bin/tools/vmap-extractor
 	cp -r vmaps /config
+
 	echo "[***] Visual maps: complete"
+	rm -R /wow/vmaps /wow/Buildings
 fi
 
 if [[ ! -d /config/mmaps ]]; then
 	echo "[***] Movement maps: generating files"
 	cd /wow
-	/mangos/bin/mmaps_generator
+	for x in 'MoveMapGen.sh' 'offmesh.txt' 'mmap_excluded.txt' 'mmap-extractor'; do
+		cp /mangos/bin/tools/${x} /wow/
+	done
+	chmod +x /wow/MoveMapGen.sh /wow/mmap-extractor
+	./MoveMapGen.sh 4
 	cp -r mmaps /config
+
 	echo "[***] Movement maps: complete"
+	for x in 'MoveMapGen.sh' 'offmesh.txt' 'mmap_excluded.txt' 'mmap-extractor'; do
+		rm /wow/${x}
+	done
+	rm -R /wow/mmaps
 fi
 
 # Cleanup
-for x in 'dbc' 'maps' 'vmaps' 'mmaps'; do
+for x in 'dbc' 'maps' 'vmaps' 'mmaps' 'Buildings'; do
 	if [[ -d /wow/${x} ]]; then
 		echo "[***] Cleaning up ${x} from /wow folder"
 		rm -R /wow/${x}

@@ -4,86 +4,54 @@ if [[ "${M_MANGOSD}" != "true" ]]; then
 	exit 0
 fi
 
-# Useful sql functions
-function userSQL {
-	QUERY="${@}"
-	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "${SQL_USER}" "-p${SQL_PASSWORD}" "${SQL_DB}" -BNe "${QUERY}"
-}
-function userSQLFile {
-	FILEPATH="${@}"
-	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "${SQL_USER}" "-p${SQL_PASSWORD}" -q -s "${SQL_DB}" < "${FILEPATH}"
-}
+source /gowowcore/_sql.sh
 
-## Sync realm to realmlist
-# ASSUMES REALMD HAS POPULATED AUTH DB
-# Reload AUTH DB config
-SQL_CONFIG=$(awk '/^LoginDatabaseInfo/{print $NF}' "/config/${M_MANGOSD_CONFIGFILE}")
-regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
-if [[ ${SQL_CONFIG} =~ $regex ]]; then
-	SQL_HOSTNAME=${BASH_REMATCH[1]}
-	SQL_PORT=${BASH_REMATCH[2]}
-	SQL_USER=${BASH_REMATCH[3]}
-	SQL_PASSWORD=${BASH_REMATCH[4]}
-	SQL_DB=${BASH_REMATCH[5]}
-else
-	echo "[***] That was weird, couldn't get SQL credentials from worldserver config file. I had it before."
-	exit 1
-fi
+# Install Character and World DBs
+for entry in 'World,WorldDatabaseInfo,db/World/Setup/mangosdLoadDB.sql' 'Character,CharacterDatabaseInfo,db/Character/Setup/characterLoadDB.sql'; do
+	FOLDER=$(echo ${entry} | cut -d',' -f1)
+	CONFIG_ATTR=$(echo ${entry} | cut -d',' -f2)
+	SQL_FILE=$(echo ${entry} | cut -d',' -f3)
 
-# Wait for tables to be created
-for table in 'realmlist'; do
-	while [[ $(userSQL "SHOW TABLES LIKE '${table}';" | wc -l) -eq 0 ]]; do
-		sleep 1s
+	SQLextractCreds "${CONFIG_ATTR}" "/config/${M_MANGOSD_CONFIGFILE}"
+	SQLwaitPort
+	SQLwaitUser
+
+	# Install DB if not exists
+	if [[ $(SQLuser "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
+		echo "[***] Couldn't find db_version table in ${SQL_DB}. Installing ${CONFIG_ATTR} to ${SQL_DB}."
+		SQLuserFile "/${MANGOS_FAMILY}/${SQL_FILE}"
+		if [[ "${CONFIG_ATTR}" == "WorldDatabaseInfo" ]]; then
+			for x in $(ls -1 /${MANGOS_FAMILY}/db/World/Setup/FullDB/*.sql); do
+				SQLuserFile "${x}"
+			done
+		fi
+	fi
+	DB_VERSION=$(SQLuser "SELECT \`version\` FROM \`db_version\` ORDER BY \`version\` DESC, \`structure\` DESC LIMIT 0,1;")
+	echo "[***] ${CONFIG_ATTR} installed is ${DB_VERSION}"
+	# Run all upgrade queries from /Updates/Rel-version
+	echo "[***] Running all available DB migrations"
+	for x in $(ls -1 /${MANGOS_FAMILY}/db/${FOLDER}/Updates/Rel${DB_VERSION}/*.sql | sort -n); do
+		sed -i 's#DEFINER=`root`@`localhost`##g' "${x}"
+		SQLuserFile "${x}"
 	done
 done
 
+# Register with realmlist in authDB
+SQLextractCreds "LoginDatabaseInfo" "/config/${M_MANGOSD_CONFIGFILE}"
+SQLwaitPort
+SQLwaitUser
+
+SQLwaitTable "realmlist"
+
 # Sync this realm into the realmlist
 if [[ -z "${M_MANGOSD_REALMID}" ]]; then
-	M_MANGOSD_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${M_MANGOSD_NAME}';")
+	M_MANGOSD_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${M_MANGOSD_NAME}';")
 fi
 if [[ -n "${M_MANGOSD_REALMID}" ]]; then
-	userSQL "REPLACE INTO \`realmlist\` (\`id\`,\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`realmbuilds\`) VALUES (${M_MANGOSD_REALMID}, '${M_MANGOSD_NAME}', '${M_MANGOSD_ADDRESS}', ${M_MANGOSD_PORT}, ${M_MANGOSD_ICON}, ${M_MANGOSD_TZ}, ${M_MANGOSD_MINSECURITY}, ${M_MANGOSD_REALMBUILD});"
+	SQLuser "REPLACE INTO \`realmlist\` (\`id\`,\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`realmbuilds\`) VALUES (${M_MANGOSD_REALMID}, '${M_MANGOSD_NAME}', '${M_MANGOSD_ADDRESS}', ${M_MANGOSD_PORT}, ${M_MANGOSD_ICON}, ${M_MANGOSD_TZ}, ${M_MANGOSD_MINSECURITY}, ${M_MANGOSD_REALMBUILD});"
 else
-	userSQL "REPLACE INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`realmbuilds\`) VALUES ('${M_MANGOSD_NAME}','${M_MANGOSD_ADDRESS}', ${M_MANGOSD_PORT}, ${M_MANGOSD_ICON}, ${M_MANGOSD_TZ}, ${M_MANGOSD_MINSECURITY}, ${M_MANGOSD_REALMBUILD});"
+	SQLuser "REPLACE INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`realmbuilds\`) VALUES ('${M_MANGOSD_NAME}','${M_MANGOSD_ADDRESS}', ${M_MANGOSD_PORT}, ${M_MANGOSD_ICON}, ${M_MANGOSD_TZ}, ${M_MANGOSD_MINSECURITY}, ${M_MANGOSD_REALMBUILD});"
 fi
 
-M_MANGOSD_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${M_MANGOSD_NAME}';")
+M_MANGOSD_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${M_MANGOSD_NAME}';")
 sed -i "s/^RealmID .*/RealmID = ${M_MANGOSD_REALMID}/g" "/config/${M_MANGOSD_CONFIGFILE}"
-
-# Install mangosd character and world DB's if not exists
-for entry in 'WorldDatabaseInfo,db/World/Setup/mangosdLoadDB.sql' 'CharacterDatabaseInfo,db/Character/Setup/characterLoadDB.sql'; do
-	SQL_CONFIG=$(awk "/^${entry%,*}/{print \$NF}" "/config/${M_MANGOSD_CONFIGFILE}")
-	regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
-	if [[ ${SQL_CONFIG} =~ $regex ]]; then
-		SQL_HOSTNAME=${BASH_REMATCH[1]}
-		SQL_PORT=${BASH_REMATCH[2]}
-		SQL_USER=${BASH_REMATCH[3]}
-		SQL_PASSWORD=${BASH_REMATCH[4]}
-		SQL_DB=${BASH_REMATCH[5]}
-
-		if [[ $(userSQL "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
-			echo "[***] ${entry%,*} SQL - db_version table not detected. Installing DB"
-			userSQLFile "/${MANGOS_FAMILY}/${entry#*,}"
-			if [[ "${entry%,*}" == "WorldDatabaseInfo" ]]; then
-				for x in $(ls -1 /${MANGOS_FAMILY}/db/World/Setup/FullDB/*.sql); do
-					userSQLFile "${x}"
-				done
-			fi
-		fi
-		DB_VERSION=$(userSQL "SELECT MAX(\`version\`) AS latest FROM \`db_version\`;")
-		echo "[***] ${entry%,*} SQL - Current DB version is ${DB_VERSION}"
-		# Update DB if out of date
-		REL_VERSION=$(awk -F '=' '/^RELEASE=/{print $NF}' /${MANGOS_FAMILY}/db/InstallDatabases.sh | tr -d '"')
-		echo "[***] ${entry%,*} DB - Version detected in files is ${REL_VERSION}"
-		#TODO: Handle DB updates properly
-		echo "[***] TODO: Handle DB updates properly"
-		if [[ "${REL_VERSION}" != "Rel${DB_VERSION}" ]]; then
-			echo "[***] realm DB: Exiting because DB version doesn't match expended version, and I haven't automated this part yet."
-			exit 1
-		fi
-	else
-		echo "[***] ERROR: Somehow ${entry%,*} in '/config/${M_MANGOSD_CONFIGFILE}' was not formatted as 'hostname;port;user;password;database'."
-		echo "[***] ERROR: THIS IS WEIRD, IT WAS FORMATTED RIGHT BEFORE!"
-		exit 1
-	fi
-done

@@ -1,4 +1,4 @@
 #!/usr/bin/with-contenv bash
 cd /mangos/bin
 exec \
-        /usr/bin/screen -D -m -S MANGOSD s6-setuidgid abc /mangos/bin/mangosd -c /config/${TC_WORLDSERVER_CONFIGFILE}
+        /usr/bin/screen -D -m -S MANGOSD s6-setuidgid abc /mangos/bin/mangosd -c /config/${M_MANGOSD_CONFIGFILE}

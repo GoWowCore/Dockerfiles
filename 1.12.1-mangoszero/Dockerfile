@@ -43,6 +43,7 @@ RUN \
 
 
 FROM lsiobase/ubuntu:focal as prod
+ARG MANGOS_FAMILY
 ENV \
     M_REALMD="false" \
     M_REALMD_CONFIGFILE="realmd.conf" \
@@ -62,7 +63,7 @@ ENV \
 
 ## mangoszero:1.12.1 - start
 COPY --from=build /mangos /mangos
-COPY --from=build /${MANGOS_FAMILY} /${MANGOS_FAMILY}
+COPY --from=build "/${MANGOS_FAMILY}" "/${MANGOS_FAMILY}"
 RUN \
     apt-get -y update && \
     apt-get -y install \
