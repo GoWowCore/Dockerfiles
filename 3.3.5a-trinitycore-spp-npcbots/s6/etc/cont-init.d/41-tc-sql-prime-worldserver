@@ -4,45 +4,23 @@ if [[ "${TC_WORLDSERVER}" != "true" ]]; then
 	exit 0
 fi
 
-# Useful sql functions
-function userSQL {
-	QUERY="${@}"
-	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "${SQL_USER}" "-p${SQL_PASSWORD}" "${SQL_DB}" -BNe "${QUERY}"
-}
+source /gowowcore/_sql.sh
 
-## Sync realm to realmlist
-# ASSUMES AUTHSERVER HAS POPULATED AUTH DB
-# Reload AUTH DB config
-SQL_CONFIG=$(awk '/^LoginDatabaseInfo/{print $NF}' "/config/${TC_WORLDSERVER_CONFIGFILE}")
-regex="^\"([^;]+);([^;]+);([^;]+);([^;]+);([^;]+)\""
-if [[ ${SQL_CONFIG} =~ $regex ]]; then
-	SQL_HOSTNAME=${BASH_REMATCH[1]}
-	SQL_PORT=${BASH_REMATCH[2]}
-	SQL_USER=${BASH_REMATCH[3]}
-	SQL_PASSWORD=${BASH_REMATCH[4]}
-	SQL_DB=${BASH_REMATCH[5]}
-else
-	echo "[***] That was weird, couldn't get SQL credentials from worldserver config file. I had it before."
-	exit 1
-fi
+SQLextractCreds "LoginDatabaseInfo" "/config/${TC_WORLDSERVER_CONFIGFILE}"
+SQLwaitPort
+SQLwaitUser
 
-# Wait for tables to be created
-for table in 'realmlist'; do
-	while [[ $(userSQL "SHOW TABLES LIKE '${table}';" | wc -l) -eq 0 ]]; do
-		sleep 1s
-	done
-done
+SQLwaitTable 'realmlist'
 
-# TODO: Sync this realm into the realmlist
 if [[ -z "${TC_WORLDSERVER_REALMID}" ]]; then
-	TC_WORLDSERVER_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${TC_WORLDSERVER_NAME}';")
+	TC_WORLDSERVER_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${TC_WORLDSERVER_NAME}';")
 fi
 if [[ -n "${TC_WORLDSERVER_REALMID}" ]]; then
-	userSQL "REPLACE INTO \`realmlist\` (\`id\`,\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES (${TC_WORLDSERVER_REALMID}, '${TC_WORLDSERVER_NAME}', '${TC_WORLDSERVER_ADDRESS}', ${TC_WORLDSERVER_PORT}, ${TC_WORLDSERVER_ICON}, ${TC_WORLDSERVER_TZ}, ${TC_WORLDSERVER_MINSECURITY}, ${TC_WORLDSERVER_GAMEBUILD});"
+	SQLuser "REPLACE INTO \`realmlist\` (\`id\`,\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES (${TC_WORLDSERVER_REALMID}, '${TC_WORLDSERVER_NAME}', '${TC_WORLDSERVER_ADDRESS}', ${TC_WORLDSERVER_PORT}, ${TC_WORLDSERVER_ICON}, ${TC_WORLDSERVER_TZ}, ${TC_WORLDSERVER_MINSECURITY}, ${TC_WORLDSERVER_GAMEBUILD});"
 else
-	userSQL "REPLACE INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES ('${TC_WORLDSERVER_NAME}','${TC_WORLDSERVER_ADDRESS}', ${TC_WORLDSERVER_PORT}, ${TC_WORLDSERVER_ICON}, ${TC_WORLDSERVER_TZ}, ${TC_WORLDSERVER_MINSECURITY}, ${TC_WORLDSERVER_GAMEBUILD});"
+	SQLuser "REPLACE INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES ('${TC_WORLDSERVER_NAME}','${TC_WORLDSERVER_ADDRESS}', ${TC_WORLDSERVER_PORT}, ${TC_WORLDSERVER_ICON}, ${TC_WORLDSERVER_TZ}, ${TC_WORLDSERVER_MINSECURITY}, ${TC_WORLDSERVER_GAMEBUILD});"
 fi
 
-TC_WORLDSERVER_REALMID=$(userSQL "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${TC_WORLDSERVER_NAME}';")
+TC_WORLDSERVER_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${TC_WORLDSERVER_NAME}';")
 
 sed -i "s/^RealmID .*/RealmID = ${TC_WORLDSERVER_REALMID}/g" "/config/${TC_WORLDSERVER_CONFIGFILE}"
