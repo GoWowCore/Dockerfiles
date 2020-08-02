@@ -1,9 +1,9 @@
-FROM ubuntu:focal as build
+FROM ubuntu:bionic as build
 ## mangoszero:1.12.1 - start
 RUN apt-get -y update
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
-      clang cmake make gcc g++ \
-      libmariadbclient-dev libmariadb-client-lgpl-dev-compat mariadb-server mariadb-client \
+      clang cmake make gcc-4.8 g++-4.8 \
+      libmariadb-client-lgpl-dev-compat mariadb-server mariadb-client \
       libboost-all-dev \
       libssl-dev \
       libreadline-dev \
@@ -13,7 +13,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
       patch \
       git && \
     update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100 && \
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang 100
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang 100 && \
+    export CC=gcc-4.8 CXX=g++-4.8
 ## mangoszero:1.12.1 - end
 
 ARG MANGOS_FAMILY
