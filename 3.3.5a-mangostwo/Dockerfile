@@ -31,7 +31,11 @@ WORKDIR /${MANGOS_FAMILY}/build
 ## mangoszero:1.12.1 - end
 
 ## mangoszero:1.12.1 - start
-RUN cmake ../server/ -DCMAKE_INSTALL_PREFIX=/mangos -DCONF_INSTALL_DIR=/mangos/etc
+RUN cmake ../server/ \
+      -DCMAKE_INSTALL_PREFIX=/mangos \
+      -DCONF_INSTALL_DIR=/mangos/etc \
+      -DPLAYERBOTS=1 \
+      -DSOAP=1
 RUN make -j $(nproc)
 RUN make install
 RUN cd /${MANGOS_FAMILY}/server && git rev-parse --short HEAD > /mangos/.commit
