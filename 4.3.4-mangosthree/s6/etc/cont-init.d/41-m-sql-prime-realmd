@@ -1,0 +1,50 @@
+#!/usr/bin/with-contenv bash
+# Exit if authserver is not enabled
+if [[ "${M_REALMD}" != "true" ]]; then
+	exit 0
+fi
+
+source /gowowcore/_sql.sh
+
+SQLextractCreds "LoginDatabaseInfo" "/config/${M_REALMD_CONFIGFILE}"
+
+SQLwaitPort
+SQLwaitUser
+
+# Install realmDB if not exists
+if [[ $(SQLuser "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
+	echo "[***] Couldn't find db_version table in ${SQL_DB}. Installing realmDB"
+	SQLuserFile "/${MANGOS_FAMILY}/db/Realm/Setup/realmdLoadDB.sql"
+fi
+DB_VERSION=$(SQLuser "SELECT MAX(\`version\`) AS latest FROM \`db_version\`;")
+echo "[***] realmdb installed is ${DB_VERSION}"
+
+REL_VERSION=$(awk -F '=' '/^RELEASE=/{print $NF}' /${MANGOS_FAMILY}/db/InstallDatabases.sh | tr -d '"')
+echo "[***] realmdb detected in container is ${REL_VERSION}"
+# TODO automate DB upgrade
+if [[ "${REL_VERSION}" != "Rel${DB_VERSION}" ]]; then
+	echo "[***] realm DB: Exiting because DB version doesn't match expended version, and I haven't automated this part yet."
+	exit 1
+fi
+
+# Clean mangos default users
+for entry in '1,ADMINISTRATOR,a34b29541b87b7e4823683ce6c7bf6ae68beaaac' '2,GAMEMASTER,7841e21831d7c6bc0b57fbe7151eb82bd65ea1f9' '3,MODERATOR,a7f5fbff0b4eec2d6b6e78e38e8312e64d700008' '4,PLAYER,3ce8a96d17c5ae88a30681024e86279f1a38c041'; do
+	regex="^([^,]+),([^,]+),([^,]+)"
+	if [[ ${entry} =~ $regex ]]; then
+		U_ID=${BASH_REMATCH[1]}
+		U_NAME=${BASH_REMATCH[2]}
+		U_HASH=${BASH_REMATCH[3]}
+		SQLuser "DELETE FROM \`account\` WHERE \`id\`=${U_ID} AND \`username\`='${U_NAME}' AND \`sha_pass_hash\`='${U_HASH}' AND \`sessionkey\`='' AND \`last_login\`='';"
+	fi
+done
+
+# Add our default user
+SQLuser "INSERT IGNORE INTO \`account\` (\`id\`, \`username\`, \`sha_pass_hash\`, \`gmlevel\`, \`expansion\`) VALUES (1, 'admin', SHA1(CONCAT(UPPER('admin'), ':', UPPER('admin'))), 3, 0);"
+
+# realmd won't start if the realmlist table is empty
+if [[ $(SQLuser "SELECT COUNT(\`id\`) FROM \`realmlist\`;") -eq 0 ]]; then
+	SQLuser "INSERT INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`realmflags\`,\`allowedSecurityLevel\`) VALUES ('Realms Pending','127.0.0.100','1234',2,3);"
+elif [[ $(SQLuser "SELECT COUNT(\`id\`) FROM \`realmlist\`;") -gt 1 ]]; then
+	# Get rid of this realm if another exists
+	SQLuser "DELETE FROM \`realmlist\` WHERE \`name\`='Realms Pending' AND \`realmbuilds\`='';"
+fi
