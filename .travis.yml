@@ -1,0 +1,29 @@
+os: linux
+dist: focal
+language: shell
+services:
+- docker
+addons:
+  apt:
+    update: true
+    sources:
+    - sourceline: "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+      key_url: https://download.docker.com/linux/ubuntu/gpg
+    packages:
+    - containerd.io
+    - docker-ce
+    - docker-ce-cli
+    - git
+
+env:
+- PAYLOAD=3.3.5a-trinitycore
+- PAYLOAD=3.3.5a-trinitycore-spp-npcbots
+- PAYLOAD=1.12.1-mangoszero
+- PAYLOAD=2.4.3-mangosone
+- PAYLOAD=3.3.5a-mangostwo
+- PAYLOAD=4.3.4-mangosthree
+- PAYLOAD=5.4.8-mangosfour
+
+script:
+- cd ${PAYLOAD}
+- docker-compose build
