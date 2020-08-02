@@ -2,6 +2,11 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 repack_regex="^([^-]+)-(.*)"
 
+# Bases come from:
+## common - generic common scripts
+## 1.12.1-mangoszero - mangos family scripts
+## 3.3.5a-trinitycore - trinitycore/3.3.5 family scripts
+
 # Sync base utility functions
 for repack_dir in $(find "${DIR}" -mindepth 1 -maxdepth 1 -type d); do
 	repack=$(basename "${repack_dir}")
@@ -23,3 +28,6 @@ for mangos in '2.4.3-mangosone' '3.3.5a-mangostwo' '4.3.4-mangosthree' '5.4.8-ma
 		sed -i "s#zero#${FAMILY}#g" "${DIR}/${mangos}/"*.*
 	fi
 done
+
+# Sync 3.3.5a-trinitycore to 3.3.5a-spp
+rsync -av --delete "${DIR}/3.3.5a-trinitycore/s6/." "${DIR}/3.3.5a-trinitycore-spp-npcbots/s6/."
