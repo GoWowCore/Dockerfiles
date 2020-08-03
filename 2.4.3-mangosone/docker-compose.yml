@@ -19,6 +19,7 @@ services:
       dockerfile: "Dockerfile"
       args:
         MANGOS_FAMILY: one
+        MANGOS_PLAYERBOTS: "0"
     image: "mangosone-realmd-2.4.3:latest"
     restart: always
     depends_on:
@@ -40,6 +41,7 @@ services:
       dockerfile: "Dockerfile"
       args:
         MANGOS_FAMILY: one
+        MANGOS_PLAYERBOTS: "0"
     image: "mangosone-mangosd-2.4.3:latest"
     restart: always
     depends_on:
@@ -76,6 +78,7 @@ services:
       dockerfile: "Dockerfile"
       args:
         MANGOS_FAMILY: one
+        MANGOS_PLAYERBOTS: "0"
     image: "mangosone-mangosd-2.4.3:latest"
     restart: always
     depends_on:

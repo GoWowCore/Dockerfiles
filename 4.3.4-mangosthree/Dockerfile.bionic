@@ -1,0 +1,91 @@
+FROM ubuntu:bionic as build
+## mangosthree:4.3.4 - start
+RUN apt-get -y update
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
+      build-essential clang cmake make gcc-4.8 g++-4.8 \
+      mysql-server mysql-client \
+      libmysqld-dev \
+      default-libmysqlclient-dev \
+      libace-6.4.5 libace-dev \
+      libpth20 \
+      libboost-all-dev \
+      libssl-dev \
+      libreadline-dev \
+      libbz2-dev \
+      p7zip-full \
+      wget \
+      patch \
+      git && \
+    update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang 100
+## mangosthree:4.3.4 - end
+
+ARG MANGOS_FAMILY
+ARG MANGOS_PLAYERBOTS=0
+
+## mangosthree:4.3.4 - start
+RUN \
+    mkdir /${MANGOS_FAMILY} && \
+    git clone --single-branch --recursive --depth 1 https://github.com/mangos${MANGOS_FAMILY}/server.git /${MANGOS_FAMILY}/server && \
+    git clone --single-branch --recursive --depth 1 https://github.com/mangos${MANGOS_FAMILY}/database.git /${MANGOS_FAMILY}/db && \
+    cd /${MANGOS_FAMILY}/server/dep && git pull origin master && git checkout master
+## mangosthree:4.3.4 - end
+
+## mangosthree:4.3.4 - start
+RUN mkdir /${MANGOS_FAMILY}/build
+WORKDIR /${MANGOS_FAMILY}/build
+## mangosthree:4.3.4 - end
+
+## mangosthree:4.3.4 - start
+RUN export CC=gcc-4.8 CXX=g++-4.8 && \
+    cmake ../server/ \
+      -DCMAKE_INSTALL_PREFIX=/mangos \
+      -DCONF_INSTALL_DIR=/mangos/etc \
+      -DPLAYERBOTS=${MANGOS_PLAYERBOTS} \
+      -DSOAP=1
+RUN make -j $(nproc)
+RUN make install
+RUN cd /${MANGOS_FAMILY}/server && git rev-parse --short HEAD > /mangos/.commit
+RUN \
+    cd / && \
+    rm -R /${MANGOS_FAMILY}/build && \
+    rm -R /${MANGOS_FAMILY}/server/.git /${MANGOS_FAMILY}/db/.git
+## mangosthree:4.3.4 - end
+
+
+FROM lsiobase/ubuntu:focal as prod
+ARG MANGOS_FAMILY
+ENV \
+    M_REALMD="false" \
+    M_REALMD_CONFIGFILE="realmd.conf" \
+    M_REALMD_PORT="3724" \
+    M_MANGOSD="false" \
+    M_MANGOSD_SOAP="false" \
+    M_MANGOSD_SOAP_PORT="7878" \
+    M_MANGOSD_CONFIGFILE="mangosd.conf" \
+    M_MANGOSD_PORT="8085" \
+    M_MANGOSD_NAME="GoWowCore" \
+    M_MANGOSD_ADDRESS="127.0.0.1" \
+    M_MANGOSD_ICON="0" \
+    M_MANGOSD_TZ="0" \
+    M_MANGOSD_MINSECURITY="0" \
+    M_MANGOSD_REALMBUILD="5875" \
+    MANGOS_FAMILY="${MANGOS_FAMILY}"
+
+## mangosthree:4.3.4 - start
+COPY --from=build /mangos /mangos
+COPY --from=build "/${MANGOS_FAMILY}" "/${MANGOS_FAMILY}"
+RUN \
+    apt-get -y update && \
+    apt-get -y install \
+      libmariadb3 mariadb-client \
+      openssl \
+      screen \
+      netcat \
+      libboost-all-dev libreadline8 && \
+    apt-get clean autoclean && \
+    apt-get autoremove --yes && \
+    rm -rf /var/lib/apt/lists/* && \
+    chown -R abc:abc /mangos /${MANGOS_FAMILY}
+COPY s6/ /
+## mangosthree:4.3.4 - end

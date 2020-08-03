@@ -29,5 +29,12 @@ for mangos in '2.4.3-mangosone' '3.3.5a-mangostwo' '4.3.4-mangosthree' '5.4.8-ma
 	fi
 done
 
+# Sync playerbots versions of all mangos
+for mangos in '1.12.1-mangoszero' '2.4.3-mangosone' '3.3.5a-mangostwo' '4.3.4-mangosthree' '5.4.8-mangosfour'; do
+	mkdir -p "${DIR}/${mangos}-playerbots"
+	rsync -av --delete "${DIR}/${mangos}/." "${DIR}/${mangos}-playerbots/."
+	sed -i 's#MANGOS_PLAYERBOTS: "0"#MANGOS_PLAYERBOTS: "1"#g' "${DIR}/${mangos}-playerbots/docker-compose.yml"
+done
+
 # Sync 3.3.5a-trinitycore to 3.3.5a-spp
 rsync -av --delete "${DIR}/3.3.5a-trinitycore/s6/." "${DIR}/3.3.5a-trinitycore-spp-npcbots/s6/."

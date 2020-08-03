@@ -1,0 +1,4 @@
+#!/usr/bin/with-contenv bash
+cd /mangos/bin
+exec \
+	/usr/bin/screen -D -m -S REALMD s6-setuidgid abc /mangos/bin/realmd -c /config/${M_REALMD_CONFIGFILE}

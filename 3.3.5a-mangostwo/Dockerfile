@@ -1,9 +1,10 @@
-FROM ubuntu:bionic as build
+FROM ubuntu:focal as build
 ## mangoszero:1.12.1 - start
 RUN apt-get -y update
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
-      clang cmake make gcc-4.8 g++-4.8 \
-      libmariadb-client-lgpl-dev-compat mariadb-server mariadb-client \
+      build-essential clang cmake make gcc g++ \
+      libmariadbclient-dev libmariadb-client-lgpl-dev-compat mariadb-server mariadb-client \
+      libpth20 \
       libboost-all-dev \
       libssl-dev \
       libreadline-dev \
@@ -13,11 +14,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
       patch \
       git && \
     update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100 && \
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang 100 && \
-    export CC=gcc-4.8 CXX=g++-4.8
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang 100
 ## mangoszero:1.12.1 - end
 
 ARG MANGOS_FAMILY
+ARG MANGOS_PLAYERBOTS=0
 
 ## mangoszero:1.12.1 - start
 RUN \
@@ -35,7 +36,7 @@ WORKDIR /${MANGOS_FAMILY}/build
 RUN cmake ../server/ \
       -DCMAKE_INSTALL_PREFIX=/mangos \
       -DCONF_INSTALL_DIR=/mangos/etc \
-      -DPLAYERBOTS=1 \
+      -DPLAYERBOTS=${MANGOS_PLAYERBOTS} \
       -DSOAP=1
 RUN make -j $(nproc)
 RUN make install
