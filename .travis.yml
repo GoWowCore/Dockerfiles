@@ -26,6 +26,7 @@ env:
 # TrinityCore family
 - PAYLOAD=3.3.5a-trinitycore
 - PAYLOAD=3.3.5a-trinitycore-spp-npcbots
+- PAYLOAD=4.3.4-trinitycore-spp
 
 # MaNGOS with PLAYERBOTS enabled
 - PAYLOAD=1.12.1-mangoszero-playerbots

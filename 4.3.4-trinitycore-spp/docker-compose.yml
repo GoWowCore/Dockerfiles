@@ -1,0 +1,102 @@
+version: '2.1'
+
+services:
+  db:
+    image: mariadb:10.5
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_INITDB_SKIP_TZINFO: "1"
+    ports:
+    - "3306:3306"
+    volumes:
+    - "./mariadb:/var/lib/mysql"
+
+  authserver:
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+    image: "3.3.5a-spp-authserver:latest"
+    restart: always
+    depends_on:
+    - db
+    ports:
+    - "3724:3724"
+    volumes:
+    - "./config.auth:/config"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
+
+      TC_AUTHSERVER: "true"
+      TC_AUTH_SQL: mysql://trinity:trinity@db:3306/auth
+      TC_AUTHSERVER_PORT: "3724"
+
+  worldserver:
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+    image: "3.3.5a-spp-worldserver:latest"
+    restart: always
+    depends_on:
+    - db
+    ports:
+    - "8085:8085"
+    - "7878:7878"
+    volumes:
+    - "./config.worldserver:/config"
+    - "./wow-3.3.5a:/wow"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
+
+      TC_WORLDSERVER: "true"
+      TC_WORLDSERVER_SOAP: "true"
+      TC_WORLDSERVER_SOAP_PORT: "7878"
+
+      TC_AUTH_SQL: mysql://trinity:trinity@db:3306/auth
+      TC_CHARACTER_SQL: mysql://trinity:trinity@db:3306/characters
+      TC_WORLD_SQL: mysql://trinity:trinity@db:3306/world
+
+      # IF realmid is defined, will override existing realm of this id(if exists), otherwise will update based on NAME and will update config file accordingly
+      TC_WORLDSERVER_REALMID: 1
+      TC_WORLDSERVER_NAME: "GoWowCore_3.3.5a-spp_1"
+      TC_WORLDSERVER_ADDRESS: "127.0.0.1"
+      TC_WORLDSERVER_PORT: "8085"
+      TC_WORLDSERVER_ICON: "0"
+      TC_WORLDSERVER_TZ: "1"
+      TC_WORLDSERVER_MINSECURITY: "0"
+
+  worldserver2:
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+    image: "3.3.5a-spp-worldserver:latest"
+    restart: always
+    depends_on:
+    - db
+    ports:
+    - "8086:8086"
+    - "7879:7879"
+    volumes:
+    - "./config.worldserver:/config"
+    - "./wow-3.3.5a:/wow"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
+      TC_WORLDSERVER_CONFIGFILE: "worldserver2.conf"
+
+      TC_WORLDSERVER: "true"
+      TC_WORLDSERVER_SOAP: "true"
+      TC_WORLDSERVER_SOAP_PORT: "7879"
+
+      TC_AUTH_SQL: mysql://trinity:trinity@db:3306/auth
+      TC_CHARACTER_SQL: mysql://trinity:trinity@db:3306/characters2
+      TC_WORLD_SQL: mysql://trinity:trinity@db:3306/world2
+
+      # IF realmid is defined, will override existing realm of this id(if exists), otherwise will update based on NAME and will update config file accordingly
+#      TC_WORLDSERVER_REALMID: 2
+      TC_WORLDSERVER_NAME: "GoWowCore_3.3.5a-spp_2"
+      TC_WORLDSERVER_ADDRESS: "127.0.0.1"
+      TC_WORLDSERVER_PORT: "8086"
+      TC_WORLDSERVER_ICON: "0"
+      TC_WORLDSERVER_TZ: "1"
+      TC_WORLDSERVER_MINSECURITY: "0"
