@@ -1,0 +1,33 @@
+#!/usr/bin/with-contenv bash
+# Exit if authserver is not enabled
+if [[ "${AC_AUTHSERVER}" != "true" ]]; then
+	exit 0
+fi
+
+# Set the auth port
+if [[ -n "${AC_AUTHSERVER_PORT}" ]]; then
+	sed -i "s/^RealmServerPort .*/RealmServerPort = ${AC_AUTHSERVER_PORT}/g" "/config/${AC_AUTHSERVER_CONFIGFILE}"
+fi
+
+# Sync the provided SQL credentials to the config file
+if [[ -n "${AC_AUTH_SQL}" ]]; then
+	regex="^mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.*)$"
+	if [[ ${AC_AUTH_SQL} =~ $regex ]]; then
+		SQL_HOSTNAME=${BASH_REMATCH[3]}
+		SQL_PORT=${BASH_REMATCH[4]}
+		SQL_USER=${BASH_REMATCH[1]}
+		SQL_PASSWORD=${BASH_REMATCH[2]}
+		SQL_DB=${BASH_REMATCH[5]}
+		sed -i "s/^LoginDatabaseInfo .*/LoginDatabaseInfo = \"${SQL_HOSTNAME};${SQL_PORT};${SQL_USER};${SQL_PASSWORD};${SQL_DB}\"/g" "/config/${AC_AUTHSERVER_CONFIGFILE}"
+	else
+		echo '[***] ERROR: AC_AUTH_SQL format is invalid. Should be "mysql://user:password@hostname:port/database_name"'
+		exit 1
+	fi
+fi
+
+# DB and permissions are set, let authserver handle db population
+sed -i 's#^Updates.EnableDatabases =.*#Updates.EnableDatabases = 1#g' "/config/${AC_AUTHSERVER_CONFIGFILE}"
+sed -i 's#^Updates.AutoSetup.*#Updates.AutoSetup = 1#g' "/config/${AC_AUTHSERVER_CONFIGFILE}"
+sed -i 's#^Updates.Redundancy#Updates.Redundancy = 1#g' "/config/${AC_AUTHSERVER_CONFIGFILE}"
+sed -i 's#^Updates.AllowRehash#Updates.AllowRehash = 1#g' "/config/${AC_AUTHSERVER_CONFIGFILE}"
+

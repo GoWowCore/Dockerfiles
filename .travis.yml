@@ -28,6 +28,9 @@ env:
 - PAYLOAD=3.3.5a-trinitycore-spp-npcbots
 - PAYLOAD=4.3.4-trinitycore-spp
 
+# AshamaneCore family
+- PAYLOAD=7.3.5-ashamanecore
+
 # MaNGOS with PLAYERBOTS enabled
 - PAYLOAD=1.12.1-mangoszero-playerbots
 - PAYLOAD=2.4.3-mangosone-playerbots

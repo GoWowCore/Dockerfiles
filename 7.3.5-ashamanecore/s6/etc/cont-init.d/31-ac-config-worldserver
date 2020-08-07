@@ -1,0 +1,90 @@
+#!/usr/bin/with-contenv bash
+if [[ "${AC_WORLDSERVER}" != "true" ]]; then
+	exit 0
+fi
+
+# Port Configs
+if [[ -n "${AC_WORLDSERVER_PORT}" ]]; then
+        sed -i "s/^WorldServerPort .*/WorldServerPort = ${AC_WORLDSERVER_PORT}/g" "/config/${AC_WORLDSERVER_CONFIGFILE}"
+fi
+
+if [[ "${AC_WORLDSERVER_SOAP}" == "true" ]]; then
+	if [[ -n "${AC_WORLDSERVER_SOAP_PORT}" ]]; then
+	        sed -i "s/^SOAP.Enabled .*/SOAP.Enabled = 1/g" "/config/${AC_WORLDSERVER_CONFIGFILE}"
+	        sed -i 's/^SOAP.IP .*/SOAP.IP = "0.0.0.0"/g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+	        sed -i "s/^SOAP.Port .*/SOAP.Port = ${AC_WORLDSERVER_SOAP_PORT}/g" "/config/${AC_WORLDSERVER_CONFIGFILE}"
+	fi
+else
+        sed -i "s/^SOAP.Enabled .*/SOAP.Enabled = 0/g" "/config/${AC_WORLDSERVER_CONFIGFILE}"
+fi
+
+## SQL Configs
+if [[ -n "${AC_AUTH_SQL}" ]]; then
+        regex="^mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.*)$"
+        if [[ ${AC_AUTH_SQL} =~ $regex ]]; then
+                SQL_HOSTNAME=${BASH_REMATCH[3]}
+                SQL_PORT=${BASH_REMATCH[4]}
+                SQL_USER=${BASH_REMATCH[1]}
+                SQL_PASSWORD=${BASH_REMATCH[2]}
+                SQL_DB=${BASH_REMATCH[5]}
+                sed -i "s/^LoginDatabaseInfo .*/LoginDatabaseInfo = \"${SQL_HOSTNAME};${SQL_PORT};${SQL_USER};${SQL_PASSWORD};${SQL_DB}\"/g" "/config/${AC_WORLDSERVER_CONFIGFILE}"
+        else
+                echo '[***] ERROR: AC_AUTH_SQL format is invalid. Should be "mysql://user:password@hostname:port/database_name"'
+                exit 1
+        fi
+fi
+
+if [[ -n "${AC_CHARACTER_SQL}" ]]; then
+        regex="^mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.*)$"
+        if [[ ${AC_CHARACTER_SQL} =~ $regex ]]; then
+                SQL_HOSTNAME=${BASH_REMATCH[3]}
+                SQL_PORT=${BASH_REMATCH[4]}
+                SQL_USER=${BASH_REMATCH[1]}
+                SQL_PASSWORD=${BASH_REMATCH[2]}
+                SQL_DB=${BASH_REMATCH[5]}
+                sed -i "s/^CharacterDatabaseInfo .*/CharacterDatabaseInfo = \"${SQL_HOSTNAME};${SQL_PORT};${SQL_USER};${SQL_PASSWORD};${SQL_DB}\"/g" "/config/${AC_WORLDSERVER_CONFIGFILE}"
+        else
+                echo '[***] ERROR: AC_CHARACTER_SQL format is invalid. Should be "mysql://user:password@hostname:port/database_name"'
+                exit 1
+        fi
+fi
+
+if [[ -n "${AC_WORLD_SQL}" ]]; then
+        regex="^mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.*)$"
+        if [[ ${AC_WORLD_SQL} =~ $regex ]]; then
+                SQL_HOSTNAME=${BASH_REMATCH[3]}
+                SQL_PORT=${BASH_REMATCH[4]}
+                SQL_USER=${BASH_REMATCH[1]}
+                SQL_PASSWORD=${BASH_REMATCH[2]}
+                SQL_DB=${BASH_REMATCH[5]}
+                sed -i "s/^WorldDatabaseInfo .*/WorldDatabaseInfo = \"${SQL_HOSTNAME};${SQL_PORT};${SQL_USER};${SQL_PASSWORD};${SQL_DB}\"/g" "/config/${AC_WORLDSERVER_CONFIGFILE}"
+        else
+                echo '[***] ERROR: AC_WORLD_SQL format is invalid. Should be "mysql://user:password@hostname:port/database_name"'
+                exit 1
+        fi
+fi
+
+# Realmid
+if [[ -n "${AC_WORLDSERVER_REALMID}" ]]; then
+        sed -i "s/^RealmID .*/RealmID = ${AC_WORLDSERVER_REALMID}/g" "/config/${AC_WORLDSERVER_CONFIGFILE}"
+fi
+
+# Directory configs
+sed -i 's#^DataDir .*#DataDir = "/config"#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+sed -i 's#^LogsDir .*#LogsDir = "/config"#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+
+# mmap/vmap/etc stuff
+if [[ -d /config/mmaps ]]; then
+	sed -i 's#^mmap.enablePathFinding .*#mmap.enablePathFinding = 1#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+else
+	sed -i 's#^mmap.enablePathFinding .*#mmap.enablePathFinding = 0#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+fi
+if [[ -d /config/vmaps ]]; then
+	sed -i 's#^vmap.enableLOS .*#vmap.enableLOS = 1#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+	sed -i 's#^vmap.enableHeight .*#vmap.enableHeight = 1#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+	sed -i 's#^vmap.enableIndoorCheck .*#vmap.enableIndoorCheck = 1#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+else
+	sed -i 's#^vmap.enableLOS .*#vmap.enableLOS = 0#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+	sed -i 's#^vmap.enableHeight .*#vmap.enableHeight = 0#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+	sed -i 's#^vmap.enableIndoorCheck .*#vmap.enableIndoorCheck = 0#g' "/config/${AC_WORLDSERVER_CONFIGFILE}"
+fi

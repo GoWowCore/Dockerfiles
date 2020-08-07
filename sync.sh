@@ -38,3 +38,28 @@ done
 
 # Sync 3.3.5a-trinitycore to 3.3.5a-spp
 rsync -av --delete "${DIR}/3.3.5a-trinitycore/s6/." "${DIR}/3.3.5a-trinitycore-spp-npcbots/s6/."
+
+# Use 3.3.5a-trinitycore as base for 7.3.5-ashamanecore
+mkdir -p "${DIR}/7.3.5-ashamanecore"
+rsync -av --delete "${DIR}/3.3.5a-trinitycore/." "${DIR}/7.3.5-ashamanecore/."
+find "${DIR}/7.3.5-ashamanecore/." -type f | xargs -n1 sed -i \
+	-e 's#git clone --single-branch -b 3.3.5 --depth 1 https://github.com/TrinityCore/TrinityCore.git#git clone --single-branch -b legion --depth 1 https://github.com/AshamaneProject/AshamaneCore.git#g' \
+	-e 's#TC_#AC_#g' \
+	-e 's#TDB#ADB#g' \
+	-e 's#tdb#adb#g' \
+	-e 's#/TrinityCore#/AshamaneCore#g' \
+	-e 's#trinitycore#ashamanecore#g' \
+	-e 's#trinity#ashamane#g' \
+	-e 's#3.3.5a#7.3.5#g' \
+	-e 's#/tc#/ac#g' \
+	-e 's#12340#26972#g'
+
+sed -i "${DIR}/7.3.5-ashamanecore/Dockerfile" \
+	-e 's#-f4#-f3 | cut -d"." -f1#g' \
+	-e 's#https://github.com/AshamaneCore/AshamaneCore/releases/download/ADB${ADB_RELEASE}/${ADB_FILE%.*}.7z#https://github.com/AshamaneProject/AshamaneCore/releases/download/ADB_${ADB_RELEASE}/ADB_${ADB_RELEASE}.zip#g' \
+	-e 's#7z#zip#g' \
+	-e 's#zip e -y /tmp/adb.zip -o/ac/bin/ ${ADB_FILE}#unzip ${ADB_FILE} -d /ac/bin/#g'
+
+for startup in $(find "${DIR}/7.3.5-ashamanecore/s6/etc/cont-init.d" -type f | grep '\-tc-'); do
+	mv "${startup}" "${startup/-tc-/-ac-}"
+done

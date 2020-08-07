@@ -1,0 +1,4 @@
+#!/usr/bin/with-contenv bash
+cd /ac/bin
+exec \
+        /usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /ac/bin/worldserver -c /config/${AC_WORLDSERVER_CONFIGFILE}

@@ -1,0 +1,102 @@
+version: '2.1'
+
+services:
+  db:
+    image: mariadb:10.5
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_INIADB_SKIP_TZINFO: "1"
+    ports:
+    - "3306:3306"
+    volumes:
+    - "./mariadb:/var/lib/mysql"
+
+  authserver:
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+    image: "7.3.5-ashamanecore-authserver:latest"
+    restart: always
+    depends_on:
+    - db
+    ports:
+    - "3724:3724"
+    volumes:
+    - "./config.auth:/config"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
+
+      AC_AUTHSERVER: "true"
+      AC_AUTH_SQL: mysql://ashamane:ashamane@db:3306/auth
+      AC_AUTHSERVER_PORT: "3724"
+
+  worldserver:
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+    image: "7.3.5-ashamanecore-worldserver:latest"
+    restart: always
+    depends_on:
+    - db
+    ports:
+    - "8085:8085"
+    - "7878:7878"
+    volumes:
+    - "./config.worldserver:/config"
+    - "./wow-7.3.5:/wow"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
+
+      AC_WORLDSERVER: "true"
+      AC_WORLDSERVER_SOAP: "true"
+      AC_WORLDSERVER_SOAP_PORT: "7878"
+
+      AC_AUTH_SQL: mysql://ashamane:ashamane@db:3306/auth
+      AC_CHARACTER_SQL: mysql://ashamane:ashamane@db:3306/characters
+      AC_WORLD_SQL: mysql://ashamane:ashamane@db:3306/world
+
+      # IF realmid is defined, will override existing realm of this id(if exists), otherwise will update based on NAME and will update config file accordingly
+      AC_WORLDSERVER_REALMID: 1
+      AC_WORLDSERVER_NAME: "GoWowCore_7.3.5-ashamanecore_1"
+      AC_WORLDSERVER_ADDRESS: "127.0.0.1"
+      AC_WORLDSERVER_PORT: "8085"
+      AC_WORLDSERVER_ICON: "0"
+      AC_WORLDSERVER_TZ: "1"
+      AC_WORLDSERVER_MINSECURITY: "0"
+
+  worldserver2:
+    build:
+      context: "."
+      dockerfile: "Dockerfile"
+    image: "7.3.5-ashamanecore-worldserver:latest"
+    restart: always
+    depends_on:
+    - db
+    ports:
+    - "8086:8086"
+    - "7879:7879"
+    volumes:
+    - "./config.worldserver:/config"
+    - "./wow-7.3.5:/wow"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-insecurepassword}"
+      AC_WORLDSERVER_CONFIGFILE: "worldserver2.conf"
+
+      AC_WORLDSERVER: "true"
+      AC_WORLDSERVER_SOAP: "true"
+      AC_WORLDSERVER_SOAP_PORT: "7879"
+
+      AC_AUTH_SQL: mysql://ashamane:ashamane@db:3306/auth
+      AC_CHARACTER_SQL: mysql://ashamane:ashamane@db:3306/characters2
+      AC_WORLD_SQL: mysql://ashamane:ashamane@db:3306/world2
+
+      # IF realmid is defined, will override existing realm of this id(if exists), otherwise will update based on NAME and will update config file accordingly
+#      AC_WORLDSERVER_REALMID: 2
+      AC_WORLDSERVER_NAME: "GoWowCore_7.3.5-ashamanecore_2"
+      AC_WORLDSERVER_ADDRESS: "127.0.0.1"
+      AC_WORLDSERVER_PORT: "8086"
+      AC_WORLDSERVER_ICON: "0"
+      AC_WORLDSERVER_TZ: "1"
+      AC_WORLDSERVER_MINSECURITY: "0"
