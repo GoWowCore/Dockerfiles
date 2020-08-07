@@ -57,8 +57,8 @@ find "${DIR}/7.3.5-ashamanecore/." -type f | xargs -n1 sed -i \
 sed -i "${DIR}/7.3.5-ashamanecore/Dockerfile" \
 	-e 's#-f4#-f3 | cut -d"." -f1#g' \
 	-e 's#https://github.com/AshamaneCore/AshamaneCore/releases/download/ADB${ADB_RELEASE}/${ADB_FILE%.*}.7z#https://github.com/AshamaneProject/AshamaneCore/releases/download/ADB_${ADB_RELEASE}/ADB_${ADB_RELEASE}.zip#g' \
-	-e 's#7z#zip#g' \
-	-e 's#zip e -y /tmp/adb.zip -o/ac/bin/ ${ADB_FILE}#unzip ${ADB_FILE} -d /ac/bin/#g'
+	-e 's#\.7z#\.zip#g' \
+	-e 's#7z e -y /tmp/adb.zip -o/ac/bin/ ${ADB_FILE}#unzip ${ADB_FILE} -d /ac/bin/#g'
 
 for startup in $(find "${DIR}/7.3.5-ashamanecore/s6/etc/cont-init.d" -type f | grep '\-tc-'); do
 	mv "${startup}" "${startup/-tc-/-ac-}"

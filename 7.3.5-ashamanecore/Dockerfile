@@ -8,7 +8,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
       libssl-dev \
       libreadline-dev \
       libbz2-dev \
-      pzipip-full \
+      zlib1g-dev \
+      p7zip-full unzip \
+      libpth20 \
       wget \
       patch \
       git && \
