@@ -1,0 +1,56 @@
+#!/usr/bin/with-contenv bash
+if [[ "${CORE}" != "mangos" ]]; then
+	exit 0
+fi
+# Exit if worldserver is not enabled
+if [[ "${WORLDSERVER}" != "true" ]]; then
+	exit 0
+fi
+
+if [[ ! -d /wow || ! -d /wow/Data ]]; then
+	echo "[***] WoW folder not detected at /wow. Skipping preparing any maps, vmaps, mmaps."
+	echo "[***] This is not an issue if you've already loaded anything you need into the /config volume."
+	exit 0
+fi
+
+if [[ ! -d /config/dbc || ! -d /config/maps ]]; then
+	echo "[***] DBC and Maps: generating files"
+	cd /wow
+	/app/bin/tools/map-extractor
+	cp -r dbc maps /config
+
+	echo "[***] DBC and Maps: complete"
+fi
+
+if [[ ! -d /config/vmaps ]]; then
+	echo "[***] Visual maps: generating files"
+	cd /wow
+	/app/bin/tools/vmap-extractor
+	cp -r vmaps /config
+
+	echo "[***] Visual maps: complete"
+fi
+
+if [[ ! -d /config/mmaps ]]; then
+	echo "[***] Movement maps: generating files"
+	cd /wow
+	for x in 'MoveMapGen.sh' 'offmesh.txt' 'mmap_excluded.txt' 'tools/mmap-extractor'; do
+		cp /app/bin/${x} /wow/
+	done
+	chmod +x /wow/MoveMapGen.sh /wow/mmap-extractor
+	./MoveMapGen.sh 4
+	cp -r mmaps /config
+
+	echo "[***] Movement maps: complete"
+	for x in 'MoveMapGen.sh' 'offmesh.txt' 'mmap_excluded.txt' 'mmap-extractor'; do
+		rm /wow/${x}
+	done
+fi
+
+# Cleanup
+for x in 'dbc' 'maps' 'vmaps' 'mmaps' 'Buildings'; do
+	if [[ -d /wow/${x} ]]; then
+		echo "[***] Cleaning up ${x} from /wow folder"
+		rm -R /wow/${x}
+	fi
+done

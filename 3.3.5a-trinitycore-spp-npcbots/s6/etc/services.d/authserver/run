@@ -1,4 +1,0 @@
-#!/usr/bin/with-contenv bash
-cd /tc/bin
-exec \
-	/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /tc/bin/authserver -c /config/${TC_AUTHSERVER_CONFIGFILE}

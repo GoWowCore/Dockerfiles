@@ -18,25 +18,21 @@ addons:
 env:
 # TrinityCore family
 - PAYLOAD=3.3.5a-trinitycore
-- PAYLOAD=3.3.5a-trinitycore-spp-npcbots
-- PAYLOAD=4.3.4-trinitycore-spp
-
-# AshamaneCore family
-- PAYLOAD=7.3.5-ashamanecore
+- PAYLOAD=3.3.5a-trinitycore-spp
 
 # Standard MaNGOS family
-- PAYLOAD=1.12.1-mangoszero
-- PAYLOAD=2.4.3-mangosone
-- PAYLOAD=3.3.5a-mangostwo
-- PAYLOAD=4.3.4-mangosthree
-- PAYLOAD=5.4.8-mangosfour
+- PAYLOAD=1.12.1-mangos-zero
+- PAYLOAD=2.4.3-mangos-one
+- PAYLOAD=3.3.5a-mangos-two
+- PAYLOAD=4.3.4-mangos-three
+- PAYLOAD=5.4.8-mangos-four
 
 # MaNGOS with PLAYERBOTS enabled
-- PAYLOAD=1.12.1-mangoszero-playerbots
-- PAYLOAD=2.4.3-mangosone-playerbots
-- PAYLOAD=3.3.5a-mangostwo-playerbots
-- PAYLOAD=4.3.4-mangosthree-playerbots
-- PAYLOAD=5.4.8-mangosfour-playerbots
+- PAYLOAD=1.12.1-mangos-zero-playerbots
+- PAYLOAD=2.4.3-mangos-one-playerbots
+- PAYLOAD=3.3.5a-mangos-two-playerbots
+- PAYLOAD=4.3.4-mangos-three-playerbots
+- PAYLOAD=5.4.8-mangos-four-playerbots
 
 script:
 - cd ${PAYLOAD}

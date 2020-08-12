@@ -1,4 +1,0 @@
-#!/usr/bin/with-contenv bash
-cd /ac/bin
-exec \
-	/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /ac/bin/authserver -c /config/${AC_AUTHSERVER_CONFIGFILE}
