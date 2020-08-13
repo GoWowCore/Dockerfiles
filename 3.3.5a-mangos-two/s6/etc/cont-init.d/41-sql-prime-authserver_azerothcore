@@ -1,0 +1,43 @@
+#!/usr/bin/with-contenv bash
+if [[ "${CORE}" != "azerothcore" ]]; then
+	exit 0
+fi
+# Exit if authserver is not enabled
+if [[ "${AUTHSERVER}" != "true" ]]; then
+	exit 0
+fi
+
+source /gowowcore/_sql.sh
+
+SQLextractCreds "LoginDatabaseInfo" "/config/${AUTHSERVER_CONFIGFILE}"
+
+SQLwaitPort
+SQLwaitUser
+
+# Create any missing tables
+for table_sql in $(ls -1 /src/server/data/sql/base/db_auth/); do
+	table=${table_sql%.*}
+	if ! SQLexistTable "${table}"; then
+		SQLuserFile "/src/server/data/sql/base/db_auth/${table_sql}"
+	fi
+done
+
+# Run any migrations
+for migration_sql in $(ls -1 /src/server/data/sql/updates/db_auth/); do
+	SQLuserFile "/src/server/data/sql/updates/db_auth/${migration_sql}"
+done
+
+# Cleanup default test users
+for entry in '1,test1,047ce22643f9b0bd6baeb18d51bf1075a4d43fc6' '2,test2,10eb1ff16cf5380147e8281cd8080a210ecb3c53' '3,test3,e546bbf9ca93ae5291f0b441bb9ea2fa0c466176' '4,test4,61015d83b456a9c6a7defdff07f55265f24097af' '5,test5,dddeac4ffe5f286ec57b7a1ed63bf3a859debe1e' '6,test6,f1f94cdffd83c8c4182d66689077f92c807ab579' '7,test7,6fcd35c35b127be1d9ca040b2b478eb366506ce2' '8,test8,484332ccb02e284e4e0a04573c3fa417f4745fdf' '9,test9,4fce15ed251721f02754d5381ae9d0137b6a6a30' '10,test10,b22d249228e84ab493b39a2bd765bee9b7c0b350'; do
+	regex="^([^,]+),([^,]+),([^,]+)"
+	if [[ ${entry} =~ $regex ]]; then
+		U_ID=${BASH_REMATCH[1]}
+		U_NAME=${BASH_REMATCH[2]}
+		U_HASH=${BASH_REMATCH[3]}
+		SQLuser "DELETE \`account\`,\`account_access\` FROM \`account\` INNER JOIN \`account_access\` ON \`account\`.\`id\` = \`account_access\`.\`id\` WHERE \`account\`.\`id\`=${U_ID} AND \`account\`.\`username\`='${U_NAME}' AND \`account\`.\`sha_pass_hash\`='${U_HASH}' AND \`account\`.\`sessionkey\`='' AND \`account\`.\`last_login\` IS NULL;"
+	fi
+done
+
+# Insert our default user
+SQLuser "INSERT IGNORE INTO \`account\` (\`id\`,\`username\`,\`sha_pass_hash\`) VALUES ( 1, 'admin', SHA1(CONCAT(UPPER('admin'), ':', UPPER('admin'))));"
+SQLuser "INSERT IGNORE INTO \`account_access\` (\`id\`, \`gmlevel\`, \`RealmID\`) VALUES (1, 4, -1);"

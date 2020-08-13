@@ -6,6 +6,10 @@ targets=(
         '3.3.5a,12340,trinitycore,,0'
         '3.3.5a,12340,trinitycore,spp,0'
 
+	'7.3.5,26972,ashamane,,0' # TODO: Building fails, haven't prepared startup logic either
+
+	'3.3.5a,12340,azerothcore,,0'
+
         '1.12.1,5875,mangos,zero,0'
         '2.4.3,8606,mangos,one,0'
         '3.3.5a,12340,mangos,two,0'

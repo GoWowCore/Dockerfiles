@@ -1,13 +1,15 @@
 #!/usr/bin/with-contenv bash
 cd /app/bin
 case "${CORE}" in
-	"trinitycore")
+	"trinitycore"|"azerothcore")
 		exec \
-			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/authserver -c /config/${AUTHSERVER_CONFIGFILE}
+			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/authserver -c /app/etc/authserver.conf
+#			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/authserver -c /config/${AUTHSERVER_CONFIGFILE}
 		;;
 	"mangos")
 		exec \
-			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/realmd -c /config/${AUTHSERVER_CONFIGFILE}
+			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/realmd -c /app/etc/realmd.conf
+#			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/realmd -c /config/${AUTHSERVER_CONFIGFILE}
 		;;
 	*)
 		exit 1

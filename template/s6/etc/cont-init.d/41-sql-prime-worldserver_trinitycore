@@ -1,0 +1,30 @@
+#!/usr/bin/with-contenv bash
+if [[ "${CORE}" != "trinitycore" ]]; then
+	exit 0
+fi
+# Exit if worldserver is not enabled
+if [[ "${WORLDSERVER}" != "true" ]]; then
+	exit 0
+fi
+
+source /gowowcore/_sql.sh
+source /gowowcore/_conf.sh
+
+SQLextractCreds "LoginDatabaseInfo" "/config/${WORLDSERVER_CONFIGFILE}"
+SQLwaitPort
+SQLwaitUser
+
+SQLwaitTable 'realmlist'
+
+if [[ -z "${WORLDSERVER_REALMID}" ]]; then
+	WORLDSERVER_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${WORLDSERVER_NAME}';")
+fi
+if [[ -n "${WORLDSERVER_REALMID}" ]]; then
+	SQLuser "REPLACE INTO \`realmlist\` (\`id\`,\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES (${WORLDSERVER_REALMID}, '${WORLDSERVER_NAME}', '${WORLDSERVER_ADDRESS}', ${WORLDSERVER_PORT}, ${WORLDSERVER_ICON}, ${WORLDSERVER_TZ}, ${WORLDSERVER_MINSECURITY}, ${WORLDSERVER_GAMEBUILD});"
+else
+	SQLuser "REPLACE INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES ('${WORLDSERVER_NAME}','${WORLDSERVER_ADDRESS}', ${WORLDSERVER_PORT}, ${WORLDSERVER_ICON}, ${WORLDSERVER_TZ}, ${WORLDSERVER_MINSECURITY}, ${WORLDSERVER_GAMEBUILD});"
+fi
+
+WORLDSERVER_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${WORLDSERVER_NAME}';")
+
+CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "RealmID" "${WORLDSERVER_REALMID}"

@@ -1,11 +1,17 @@
 #!/bin/bash
 function SQLroot {
 	QUERY="${@}"
+	if [[ -n "${GOWOWCORE_DEBUG}" ]]; then
+		(>&2 echo "SQLroot: ${QUERY}")
+	fi
 	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "root" "-p${MYSQL_ROOT_PASSWORD}" -BNe "${QUERY}"
 }
 
 function SQLuser {
 	QUERY="${@}"
+	if [[ -n "${GOWOWCORE_DEBUG}" ]]; then
+		(>&2 echo "SQLuser: ${QUERY}")
+	fi
 	mysql -h "${SQL_HOSTNAME}" -P "${SQL_PORT}" -u "${SQL_USER}" "-p${SQL_PASSWORD}" "${SQL_DB}" -BNe "${QUERY}"
 }
 
@@ -67,4 +73,9 @@ function SQLextractCreds {
 		echo "$0"
 		exit 1
 	fi
+}
+
+function SQLexistTable {
+	TABLE="${1}"
+	[ $(SQLuser "SHOW TABLES LIKE '${TABLE}';" | wc -l) -eq 1 ]
 }

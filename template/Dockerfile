@@ -1,5 +1,11 @@
-# Build pdhase
+# Build phase
 FROM ubuntu:focal as build
+
+COPY build/install.sh /install.sh
+RUN /install.sh
+COPY build/build.sh /build.sh
+
+# TODO: Split above into pre-made container, set build phase FROM that
 
 ARG CORE
 ARG FAMILY=none
@@ -10,9 +16,6 @@ ENV \
     FAMILY="${FAMILY}" \
     PLAYERBOTS="${PLAYERBOTS}"
 
-COPY build/install.sh /install.sh
-RUN /install.sh
-COPY build/build.sh /build.sh
 RUN /build.sh
 
 # Handle ownerships
@@ -23,13 +26,19 @@ RUN \
 # Resulting image phase
 FROM lsiobase/ubuntu:focal as prod
 
-ARG CORE
-ARG FAMILY=none
-ARG GAMEBULD=0
+RUN \
+    apt-get -y update && \
+    apt-get -y install \
+      screen \
+      netcat \
+      libmariadb3 mariadb-client libboost-all-dev libreadline8 \
+      libace-dev libace-6.* \
+      && \
+    apt-get clean autoclean && \
+    apt-get autoremove --yes && \
+    rm -rf /var/lib/apt/lists/*
 
-ENV \
-    CORE="${CORE}" \
-    FAMILY="${FAMILY}"
+COPY s6/ /
 
 ENV \
     AUTHSERVER="false" \
@@ -43,6 +52,16 @@ ENV \
     WORLDSERVER_ADDRESS="0.0.0.0" \
     WORLDSERVER_PORT="8085"
 
+# TODO: Split above into pre-made container, set prod phase FROM that
+
+ARG CORE
+ARG FAMILY=none
+ARG GAMEBUILD=0
+
+ENV \
+    CORE="${CORE}" \
+    FAMILY="${FAMILY}"
+
 ENV \
     WORLDSERVER_NAME="GoWowCore-${CORE}" \
     WORLDSERVER_TZ="0" \
@@ -50,16 +69,5 @@ ENV \
     WORLDSERVER_MINSECURITY="0" \
     WORLDSERVER_GAMEBUILD="${GAMEBUILD}"
 
-COPY --from=build /app /app
 COPY --from=build /src /src
-RUN \
-    apt-get -y update && \
-    apt-get -y install \
-      screen \
-      netcat \
-      libmariadb3 mariadb-client libboost-all-dev libreadline8 \
-      && \
-    apt-get clean autoclean && \
-    apt-get autoremove --yes && \
-    rm -rf /var/lib/apt/lists/*
-COPY s6/ /
+COPY --from=build /app /app

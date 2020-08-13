@@ -20,6 +20,9 @@ env:
 - PAYLOAD=3.3.5a-trinitycore
 - PAYLOAD=3.3.5a-trinitycore-spp
 
+# AzerothCore family
+- PAYLOAD=3.3.5a-azerothcore
+
 # Standard MaNGOS family
 - PAYLOAD=1.12.1-mangos-zero
 - PAYLOAD=2.4.3-mangos-one

@@ -10,6 +10,7 @@ apt-get -y install \
 	libreadline-dev \
 	libbz2-dev \
 	zlib1g-dev \
+	libace-dev libace-6.* \
 	p7zip-full unzip \
 	wget \
 	patch \

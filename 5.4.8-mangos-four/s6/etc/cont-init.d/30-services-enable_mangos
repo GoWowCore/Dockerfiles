@@ -1,0 +1,71 @@
+#!/usr/bin/with-contenv bash
+if [[ "${CORE}" != "mangos" ]]; then
+	exit 0
+fi
+
+if [[ "${AUTHSERVER}" == "true" ]]; then
+	echo "[***] REALMD is enabled"
+	if [[ -e /etc/services.d/authserver/down ]]; then
+		rm /etc/services.d/authserver/down
+	fi
+	if [[ ! -e "/config/${AUTHSERVER_CONFIGFILE}" ]]; then
+		cp /app/etc/realmd.conf.dist "/config/${AUTHSERVER_CONFIGFILE}"
+	fi
+	if [[ -e /app/etc/realmd.conf ]]; then
+		rm /app/etc/realmd.conf
+	fi
+	ln -s "/config/${AUTHSERVER_CONFIGFILE}" /app/etc/realmd.conf
+else
+	touch /etc/services.d/authserver/down
+fi
+
+if [[ "${WORLDSERVER}" == "true" ]]; then
+	echo "[***] MANGOSD is enabled"
+	if [[ -e /etc/services.d/worldserver/down ]]; then
+		rm /etc/services.d/worldserver/down
+	fi
+	if [[ ! -e "/config/${WORLDSERVER_CONFIGFILE}" ]]; then
+		cp /app/etc/mangosd.conf.dist "/config/${WORLDSERVER_CONFIGFILE}"
+	fi
+	if [[ ! -e "/config/${WORLDSERVER_AH_CONFIGFILE}" ]]; then
+		cp /app/etc/ahbot.conf.dist "/config/${WORLDSERVER_AH_CONFIGFILE}"
+	fi
+	if [[ -e /app/etc/mangosd.conf ]]; then
+		rm /app/etc/mangosd.conf
+	fi
+	if [[ -e /app/etc/ahbot.conf ]]; then
+		rm /app/etc/ahbot.conf
+	fi
+	ln -s "/config/${WORLDSERVER_CONFIGFILE}" /app/etc/mangosd.conf
+	ln -s "/config/${WORLDSERVER_AH_CONFIGFILE}" /app/etc/ahbot.conf
+else
+	touch /etc/services.d/worldserver/down
+fi
+
+# Set directory configs
+for x in "/config/${AUTHSERVER_CONFIGFILE}" "/config/${WORLDSERVER_CONFIGFILE}"; do
+	if [[ -e "${x}" ]]; then
+		for entry in 'DataDir,/config' 'LogsDir,/config' 'SourceDirectory,/src/server'; do
+			CONF_PARAM=${entry%,*}
+			CONF_VALUE=${entry#*,}
+			CONFsetQuoted "${x}" "${CONF_PARAM}" "${CONF_VALUE}"
+		done
+
+	fi
+done
+
+# Set logfile configs
+for x in "/config/${AUTHSERVER_CONFIGFILE}" "/config/${WORLDSERVER_CONFIGFILE}"; do
+	if [[ -e "${x}" ]]; then
+		for entry in 'SQLDriverLogFile,SQLDriver.log'; do
+			CONF_PARAM=${entry%,*}
+			CONF_VALUE=${entry#*,}
+			PREFIX="authserver"
+			if [[ "${x}" == "/config/${WORLDSERVER_CONFIGFILE}" ]]; then
+				PREFIX="worldserver-${WORLDSERVER_NAME}"
+			fi
+			CONFsetQuoted "${x}" "${CONF_PARAM}" "${PREFIX}-${CONF_VALUE}"
+		done
+
+	fi
+done
