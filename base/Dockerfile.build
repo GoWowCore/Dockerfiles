@@ -1,0 +1,5 @@
+FROM ubuntu:focal
+
+COPY build/install.sh /install.sh
+RUN /install.sh
+COPY build/build.sh /build.sh

@@ -1,10 +1,12 @@
 # Dockerfiles
 
+![Travis (.com)](https://img.shields.io/travis/com/gowowcore/Dockerfiles?style=flat-square)
+
 All containers are intended to be operated the same way.
 
 Intended to be minimal manual preparation steps.
 
-/config - realm/world/maps/etc files
+/config - realm/world/maps/etc files 
 /wow - (Optional) Client folder for processing maps/dbc/vmaps/mmaps from if necessary
 
 ## Use

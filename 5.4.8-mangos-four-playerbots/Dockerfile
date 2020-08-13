@@ -1,11 +1,5 @@
 # Build phase
-FROM ubuntu:focal as build
-
-COPY build/install.sh /install.sh
-RUN /install.sh
-COPY build/build.sh /build.sh
-
-# TODO: Split above into pre-made container, set build phase FROM that
+FROM docker.pkg.github.com/gowowcore/dockerfiles/base-build:latest as build
 
 ARG CORE
 ARG FAMILY=none
@@ -24,35 +18,7 @@ RUN \
     chown -R 911:911 /src /app
 
 # Resulting image phase
-FROM lsiobase/ubuntu:focal as prod
-
-RUN \
-    apt-get -y update && \
-    apt-get -y install \
-      screen \
-      netcat \
-      libmariadb3 mariadb-client libboost-all-dev libreadline8 \
-      libace-dev libace-6.* \
-      && \
-    apt-get clean autoclean && \
-    apt-get autoremove --yes && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY s6/ /
-
-ENV \
-    AUTHSERVER="false" \
-    AUTHSERVER_CONFIGFILE="authserver.conf" \
-    AUTHSERVER_ADDRESS="0.0.0.0" \
-    AUTHSERVER_PORT="3724"
-
-ENV \
-    WORLDSERVER="false" \
-    WORLDSERVER_CONFIGFILE="worldserver.conf" \
-    WORLDSERVER_ADDRESS="0.0.0.0" \
-    WORLDSERVER_PORT="8085"
-
-# TODO: Split above into pre-made container, set prod phase FROM that
+FROM docker.pkg.github.com/gowowcore/dockerfiles/base-prod:latest as prod
 
 ARG CORE
 ARG FAMILY=none
@@ -69,5 +35,6 @@ ENV \
     WORLDSERVER_MINSECURITY="0" \
     WORLDSERVER_GAMEBUILD="${GAMEBUILD}"
 
+COPY s6/ /
 COPY --from=build /src /src
 COPY --from=build /app /app

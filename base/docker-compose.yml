@@ -1,0 +1,13 @@
+version: '2.1'
+
+services:
+  build:
+    build:
+      context: "."
+      dockerfile: Dockerfile.build
+    image: docker.pkg.github.com/gowowcore/dockerfiles/base-build:latest
+  prod:
+    build:
+      context: "."
+      dockerfile: Dockerfile.prod
+    image: docker.pkg.github.com/gowowcore/dockerfiles/base-prod:latest

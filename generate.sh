@@ -2,11 +2,18 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cfg_regex="^([^,]*),([^,]*),([^,]*),([^,]*),([^,]*)$"
 
+# Sync build scripts from template to base
+if [[ ! -d "${DIR}/base/build" ]]; then
+	mkdir "${DIR}/base/build"
+fi
+rsync -av --delete "${DIR}/template/build/." "${DIR}/base/build/."
+
+# 7.3.5,26972,ashamane - TODO: Building fails, haven't prepared startup logic either
 targets=(
         '3.3.5a,12340,trinitycore,,0'
         '3.3.5a,12340,trinitycore,spp,0'
 
-	'7.3.5,26972,ashamane,,0' # TODO: Building fails, haven't prepared startup logic either
+	'7.3.5,26972,ashamane,,0'
 
 	'3.3.5a,12340,azerothcore,,0'
 

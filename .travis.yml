@@ -15,28 +15,46 @@ addons:
     - docker-ce-cli
     - git
 
-env:
-# TrinityCore family
-- PAYLOAD=3.3.5a-trinitycore
-- PAYLOAD=3.3.5a-trinitycore-spp
-
-# AzerothCore family
-- PAYLOAD=3.3.5a-azerothcore
-
-# Standard MaNGOS family
-- PAYLOAD=1.12.1-mangos-zero
-- PAYLOAD=2.4.3-mangos-one
-- PAYLOAD=3.3.5a-mangos-two
-- PAYLOAD=4.3.4-mangos-three
-- PAYLOAD=5.4.8-mangos-four
-
-# MaNGOS with PLAYERBOTS enabled
-- PAYLOAD=1.12.1-mangos-zero-playerbots
-- PAYLOAD=2.4.3-mangos-one-playerbots
-- PAYLOAD=3.3.5a-mangos-two-playerbots
-- PAYLOAD=4.3.4-mangos-three-playerbots
-- PAYLOAD=5.4.8-mangos-four-playerbots
+#before_install:
+#- sudo rm /usr/local/bin/docker-compose
+#- curl -L https://github.com/docker/compose/releases/download/1.26.2/docker-compose-`uname -s`-`uname -m` > docker-compose
+#- chmod +x docker-compose
+#- sudo mv docker-compose /usr/local/bin
 
 script:
 - cd ${PAYLOAD}
+- docker login docker.pkg.github.com -u "${GITHUB_USER}" -p "${GITHUB_TOKEN}" &> /dev/null
 - docker-compose build
+- if [[ "${TRAVIS_BUILD_STAGE_NAME}" == "base" ]]; then docker-compose push; fi
+
+stages:
+- base
+- packs
+
+jobs:
+  include:
+  - env: PAYLOAD=base
+    stage: base
+
+# TrinityCore family
+  - env: PAYLOAD=3.3.5a-trinitycore
+    stage: packs
+  - env: PAYLOAD=3.3.5a-trinitycore-spp
+
+# AzerothCore family
+  - env:  PAYLOAD=3.3.5a-azerothcore
+
+# Standard MaNGOS family
+  - env: PAYLOAD=1.12.1-mangos-zero
+  - env: PAYLOAD=2.4.3-mangos-one
+  - env: PAYLOAD=3.3.5a-mangos-two
+  - env: PAYLOAD=4.3.4-mangos-three
+  - env: PAYLOAD=5.4.8-mangos-four
+
+# MaNGOS with PLAYERBOTS enabled
+  - env: PAYLOAD=1.12.1-mangos-zero-playerbots
+  - env: PAYLOAD=2.4.3-mangos-one-playerbots
+  - env: PAYLOAD=3.3.5a-mangos-two-playerbots
+  - env: PAYLOAD=4.3.4-mangos-three-playerbots
+  - env: PAYLOAD=5.4.8-mangos-four-playerbots
+

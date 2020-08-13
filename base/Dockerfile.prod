@@ -1,0 +1,25 @@
+FROM lsiobase/ubuntu:focal
+
+RUN \
+    apt-get -y update && \
+    apt-get -y install \
+      screen \
+      netcat \
+      libmariadb3 mariadb-client libboost-all-dev libreadline8 \
+      libace-dev libace-6.* \
+      && \
+    apt-get clean autoclean && \
+    apt-get autoremove --yes && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV \
+    AUTHSERVER="false" \
+    AUTHSERVER_CONFIGFILE="authserver.conf" \
+    AUTHSERVER_ADDRESS="0.0.0.0" \
+    AUTHSERVER_PORT="3724"
+
+ENV \
+    WORLDSERVER="false" \
+    WORLDSERVER_CONFIGFILE="worldserver.conf" \
+    WORLDSERVER_ADDRESS="0.0.0.0" \
+    WORLDSERVER_PORT="8085"
