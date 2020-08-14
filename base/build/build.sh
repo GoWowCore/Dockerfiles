@@ -8,7 +8,7 @@ case "${CORE}" in
 		# Clone
 		git clone --single-branch --recursive --depth 1 https://github.com/mangos${FAMILY}/server.git /src/server
 		git clone --single-branch --recursive --depth 1 https://github.com/mangos${FAMILY}/database.git /src/db
-		cd /src/server/deb && git pull origin master && git checkout master
+		cd /src/server/dep && git pull origin master && git checkout master
 
 		# Build
 		cd /src/build
@@ -17,7 +17,7 @@ case "${CORE}" in
 			-DCONF_INSTALL_DIR=/app/etc \
 			-DPLAYERBOTS=${PLAYERBOTS} \
 			-DSOAP=1 \
-			-DTOOLS=1
+			-DBUILD_TOOLS=1
 		make -j $(nproc)
 		make install
 		;;

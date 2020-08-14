@@ -15,7 +15,7 @@ services:
 
   authserver:
     build:
-      context: "."
+      context: "../template"
       dockerfile: "Dockerfile.dockerhub"
       args:
         CORE: "${CORE}"
@@ -40,7 +40,7 @@ services:
 
   worldserver:
     build:
-      context: "."
+      context: "../template"
       dockerfile: "Dockerfile.dockerhub"
       args:
         CORE: "${CORE}"

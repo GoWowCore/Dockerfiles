@@ -51,7 +51,12 @@ for entry in ${targets[@]}; do
 		if [[ ! -d "${FOLDER}" ]]; then
 			mkdir "${FOLDER}"
 		fi
-		rsync -av --delete "${DIR}/template/." "${FOLDER}/."
+#		rsync -av --delete "${DIR}/template/." "${FOLDER}/."
+		for x in $(ls -1 ${DIR}/template/*.yml); do
+			filename=$(basename ${x})
+#			rsync -av --delete "${DIR}/template/${filename}" "${FOLDER}/${filename}"
+			ln -s ../template/${filename} "${FOLDER}/${filename}"
+		done
 
 		cat << EOF > "${FOLDER}/.env"
 CORE=${CORE}
