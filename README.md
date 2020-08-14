@@ -45,3 +45,14 @@ Each container includes:
 * "tools"
 
 You can run a single container with all included.
+
+## References
+
+* (trinitycore) TrinityCore - https://github.com/trinityCore/TrinityCore/ - Branch "3.3.5"
+* (trinitycore-spp) Single Player Project - https://github.com/conan513/SingleCore_TC - Branch "3.3.5-npcbots"
+* (trinitycore-cata) Cataclysm Preservation Project - https://github.com/The-Cataclysm-Preservation-Project/TrinityCore
+* (mangoszero) MaNGOS ZERO - https://github.com/mangoszero
+* (mangosone) MaNGOS ONE - https://github.com/mangosone
+* (mangostwo) MaNGOS TWO - https://github.com/mangostwo
+* (mangosthree) MaNGOS THREE - https://github.com/mangosthree
+* (mangosfour) MaNGOS FOUR - https://github.com/mangosfour

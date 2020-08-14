@@ -28,6 +28,9 @@ case "${CORE}" in
 				# Clone
 				git clone --single-branch -b 3.3.5-npcbots --depth 1 https://github.com/conan513/SingleCore_TC.git /src/server
 				;;
+			"cata")
+				git clone --single-branch -b master --depth 1 https://github.com/The-Cataclysm-Preservation-Project/TrinityCore.git /src/server
+				;;
 			*)
 				# Clone
 				git clone --single-branch -b 3.3.5 --depth 1 https://github.com/TrinityCore/TrinityCore.git /src/server
@@ -43,11 +46,25 @@ case "${CORE}" in
 		make install
 
 		# Grab matching TDB release
-		export TDB_FILE=$(awk '/_FULL_DATABASE/{print $NF}' /src/server/revision_data.h.in.cmake | tr -d '"')
-		export TDB_RELEASE=$(echo "${TDB_FILE}" | cut -d'_' -f4)
-		wget -q https://github.com/TrinityCore/TrinityCore/releases/download/TDB${TDB_RELEASE}/${TDB_FILE%.*}.7z \
-			-O /tmp/tdb.7z
-		7z e -y /tmp/tdb.7z -o/app/bin/ ${TDB_FILE}
+		echo "[***] Downloading appropriate TDB file"
+		case "${FAMILY}" in
+			"cata")
+				export TDB_FILE=$(awk '/_FULL_DATABASE/{print $NF}' /src/server/revision_data.h.in.cmake | tr -d '"')
+				export TDB_RELEASE=$(echo "${TDB_FILE}" | cut -d'_' -f4)
+				export TDB_ZIP=${TDB_FILE/full_world/full}
+				# https://github.com/The-Cataclysm-Preservation-Project/TrinityCore/releases/download/TDB434.20051/TDB_full_434.20051_2020_05_19.7z
+				wget -q https://github.com/The-Cataclysm-Preservation-Project/TrinityCore/releases/download/TDB${TDB_RELEASE}/${TDB_ZIP%.*}.7z \
+					-O /tmp/tdb.7z
+				7z e -y /tmp/tdb.7z -o/app/bin/ ${TDB_FILE}
+				;;
+			*)
+				export TDB_FILE=$(awk '/_FULL_DATABASE/{print $NF}' /src/server/revision_data.h.in.cmake | tr -d '"')
+				export TDB_RELEASE=$(echo "${TDB_FILE}" | cut -d'_' -f4)
+				wget -q https://github.com/TrinityCore/TrinityCore/releases/download/TDB${TDB_RELEASE}/${TDB_FILE%.*}.7z \
+					-O /tmp/tdb.7z
+				7z e -y /tmp/tdb.7z -o/app/bin/ ${TDB_FILE}
+			;;
+		esac
 		;;
 
 	"ashamane")

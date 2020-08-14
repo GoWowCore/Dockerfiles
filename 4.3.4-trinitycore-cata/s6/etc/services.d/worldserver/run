@@ -1,0 +1,17 @@
+#!/usr/bin/with-contenv bash
+cd /app/bin
+case "${CORE}" in
+	"trinitycore"|"azerothcore")
+		exec \
+			/usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /app/bin/worldserver -c /app/etc/worldserver.conf
+#			/usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /app/bin/worldserver -c /config/${WORLDSERVER_CONFIGFILE}
+		;;
+	"mangos")
+		exec \
+			/usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /app/bin/mangosd -c /app/etc/mangosd.conf
+#			/usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /app/bin/mangosd -c /config/${WORLDSERVER_CONFIGFILE}
+		;;
+	*)
+		exit 1
+		;;
+esac

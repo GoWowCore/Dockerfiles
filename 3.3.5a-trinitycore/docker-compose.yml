@@ -16,7 +16,7 @@ services:
   authserver:
     build:
       context: "."
-      dockerfile: "Dockerfile"
+      dockerfile: "Dockerfile.dockerhub"
       args:
         CORE: "${CORE}"
         FAMILY: "${FAMILY}"
@@ -41,7 +41,7 @@ services:
   worldserver:
     build:
       context: "."
-      dockerfile: "Dockerfile"
+      dockerfile: "Dockerfile.dockerhub"
       args:
         CORE: "${CORE}"
         FAMILY: "${FAMILY}"

@@ -8,10 +8,13 @@ if [[ ! -d "${DIR}/base/build" ]]; then
 fi
 rsync -av --delete "${DIR}/template/build/." "${DIR}/base/build/."
 
-# 7.3.5,26972,ashamane - TODO: Building fails, haven't prepared startup logic either
+# 4.3.4,15595,trinitycore,cata - TODO: handle bnetserver instead of authserver
+# 7.3.5,26972,ashamane - TODO: Building fails, haven't prepared startup logic either.
 targets=(
         '3.3.5a,12340,trinitycore,,0'
         '3.3.5a,12340,trinitycore,spp,0'
+
+	'4.3.4,15595,trinitycore,cata,0'
 
 	'7.3.5,26972,ashamane,,0'
 

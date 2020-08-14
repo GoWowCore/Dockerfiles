@@ -1,0 +1,41 @@
+#!/usr/bin/with-contenv bash
+if [[ "${CORE}" != "mangos" ]]; then
+	exit 0
+fi
+# Exit if authserver is not enabled
+if [[ "${AUTHSERVER}" != "true" ]]; then
+	exit 0
+fi
+
+source /gowowcore/_conf.sh
+
+entries=(
+	'RealmServerPort,AUTHSERVER_PORT'
+)
+for entry in ${entries[@]}; do
+	CONF_PARAM=${entry%,*}
+	CONF_ENV=${entry#*,}
+	if [[ -n "${!CONF_ENV}" ]]; then
+		CONFsetRaw "/config/${AUTHSERVER_CONFIGFILE}" "${CONF_PARAM}" "${!CONF_ENV}"
+	fi
+done
+
+## SQL Configs
+sql_regex="^mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.*)$"
+entries=(
+	'LoginDatabaseInfo,AUTH_SQL'
+)
+for entry in ${entries[@]}; do
+	CONF_PARAM=${entry%,*}
+	CONF_ENV=${entry#*,}
+	if [[ ${!CONF_ENV} =~ $sql_regex ]]; then
+		SQL_HOSTNAME=${BASH_REMATCH[3]}
+		SQL_PORT=${BASH_REMATCH[4]}
+		SQL_USER=${BASH_REMATCH[1]}
+		SQL_PASSWORD=${BASH_REMATCH[2]}
+		SQL_DB=${BASH_REMATCH[5]}
+		CONFsetQuoted "/config/${AUTHSERVER_CONFIGFILE}" "${CONF_PARAM}" "${SQL_HOSTNAME};${SQL_PORT};${SQL_USER};${SQL_PASSWORD};${SQL_DB}"
+	else
+		echo "[***] ERROR: ${!CONF_ENV} format is invalid. Should be 'mysql://user:password@hostname:port/database_name'"
+	fi
+done

@@ -1,0 +1,63 @@
+#!/usr/bin/with-contenv bash
+if [[ "${CORE}" != "azerothcore" ]]; then
+        exit 0
+fi
+# Exit if authserver is not enabled
+if [[ "${WORLDSERVER}" != "true" ]]; then
+        exit 0
+fi
+
+source /gowowcore/_sql.sh
+source /gowowcore/_conf.sh
+
+# Install missing tables
+for entry in 'db_world,WorldDatabaseInfo' 'db_characters,CharacterDatabaseInfo'; do
+	FOLDER=${entry%,*}
+	CONFIG_ATTR=${entry#*,}
+
+	SQLextractCreds "${CONFIG_ATTR}" "/config/${WORLDSERVER_CONFIGFILE}"
+	SQLwaitPort
+	SQLwaitUser
+
+	for table_sql in $(ls -1 "/src/server/data/sql/base/${FOLDER}/"); do
+		table=${table_sql%.*}
+		if ! SQLexistTable "${table}"; then
+			SQLuserFile "/src/server/data/sql/base/${FOLDER}/${table_sql}"
+		fi
+	done
+
+done
+
+# Run any migrations
+for entry in 'db_world,WorldDatabaseInfo' 'db_characters,CharacterDatabaseInfo'; do
+	FOLDER=${entry%,*}
+	CONFIG_ATTR=${entry#*,}
+
+	SQLextractCreds "${CONFIG_ATTR}" "/config/${WORLDSERVER_CONFIGFILE}"
+	SQLwaitPort
+	SQLwaitUser
+
+	for migration_sql in $(ls -1 "/src/server/data/sql/updates/${FOLDER}/"); do
+		SQLuserFile "/src/server/data/sql/updates/${FOLDER}/${migration_sql}"
+	done
+done
+
+# Register with authserver
+SQLextractCreds "LoginDatabaseInfo" "/config/${WORLDSERVER_CONFIGFILE}"
+SQLwaitPort
+SQLwaitUser
+
+SQLwaitTable "realmlist"
+
+# Sync this realm into the realmlist
+if [[ -z "${WORLDSERVER_REALMID}" ]]; then
+        WORLDSERVER_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${WORLDSERVER_NAME}';")
+fi
+if [[ -n "${WORLDSERVER_REALMID}" ]]; then
+        SQLuser "REPLACE INTO \`realmlist\` (\`id\`,\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES (${WORLDSERVER_REALMID}, '${WORLDSERVER_NAME}', '${WORLDSERVER_ADDRESS}', ${WORLDSERVER_PORT}, ${WORLDSERVER_ICON}, ${WORLDSERVER_TZ}, ${WORLDSERVER_MINSECURITY}, ${WORLDSERVER_GAMEBUILD});"
+else
+        SQLuser "REPLACE INTO \`realmlist\` (\`name\`,\`address\`,\`port\`,\`icon\`,\`timezone\`,\`allowedSecurityLevel\`,\`gamebuild\`) VALUES ('${WORLDSERVER_NAME}','${WORLDSERVER_ADDRESS}', ${WORLDSERVER_PORT}, ${WORLDSERVER_ICON}, ${WORLDSERVER_TZ}, ${WORLDSERVER_MINSECURITY}, ${WORLDSERVER_GAMEBUILD});"
+fi
+
+WORLDSERVER_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${WORLDSERVER_NAME}';")
+CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "RealmID" "${WORLDSERVER_REALMID}"
