@@ -15,9 +15,11 @@ case "${CORE}" in
 		cmake ../server/ \
 			-DCMAKE_INSTALL_PREFIX=/app \
 			-DCONF_INSTALL_DIR=/app/etc \
-			-DPLAYERBOTS=${PLAYERBOTS} \
+			-DBUILD_MANGOSD=1 \
+			-DBULD_REALMD=1 \
 			-DSOAP=1 \
-			-DBUILD_TOOLS=1
+			-DBUILD_TOOLS=1 \
+			-DPLAYERBOTS=${PLAYERBOTS}
 		make -j $(nproc)
 		make install
 		;;
@@ -41,6 +43,7 @@ case "${CORE}" in
 		cd /src/build
 		cmake ../server/ \
 			-DCMAKE_INSTALL_PREFIX=/app \
+			-DSERVERS=1 \
 			-DTOOLS=1
 		make -j $(nproc)
 		make install
@@ -75,6 +78,7 @@ case "${CORE}" in
 		cd /src/build
 		cmake ../server/ \
 			-DCMAKE_INSTALL_PREFIX=/app \
+			-DSERVERS=1 \
 			-DTOOLS=1
 		make -j $(nproc)
 		make install
@@ -96,6 +100,7 @@ case "${CORE}" in
 		cd /src/build
 		cmake ../server/ \
 			-DCMAKE_INSTALL_PREFIX=/app \
+			-DSERVERS=1 \
 			-DTOOLS=1
 		make -j $(nproc)
 		make install
