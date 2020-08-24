@@ -9,17 +9,17 @@ git:
 services:
 - docker
 
-addons:
-  apt:
-    update: true
-    sources:
-    - sourceline: "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
-      key_url: https://download.docker.com/linux/ubuntu/gpg
-    packages:
-    - containerd.io
-    - docker-ce
-    - docker-ce-cli
-    - git
+#addons:
+#  apt:
+#    update: true
+#    sources:
+#    - sourceline: "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+#      key_url: https://download.docker.com/linux/ubuntu/gpg
+#    packages:
+#    - containerd.io
+#    - docker-ce
+#    - docker-ce-cli
+#    - git
 
 #before_install:
 #- sudo rm /usr/local/bin/docker-compose
