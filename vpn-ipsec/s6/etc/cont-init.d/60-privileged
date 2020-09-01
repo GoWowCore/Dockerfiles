@@ -1,0 +1,13 @@
+#!/usr/bin/with-contenv sh
+
+if ip link add dummy0 type dummy 2>&1 | grep -q "not permitted"; then
+cat 1>&2 <<'EOF'
+Error: This Docker image must be run in privileged mode.
+    For detailed instructions, please visit:
+    https://github.com/hwdsl2/docker-ipsec-vpn-server
+
+EOF
+  exit 1
+fi
+ip link delete dummy0 >/dev/null 2>&1
+

@@ -72,3 +72,9 @@ EOF
 
 	fi
 done
+
+# Extra for VPN container
+if [[ ! -d "${DIR}/vpn-ipsec/s6/gowowcore" ]]; then
+	mkdir -p "${DIR}/vpn-ipsec/s6/gowowcore"
+fi
+rsync -av --delete "${DIR}/template/s6/gowowcore/." "${DIR}/vpn-ipsec/s6/gowowcore/."

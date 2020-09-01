@@ -1,0 +1,7 @@
+#!/usr/bin/with-contenv bash
+UMASK_SET=${UMASK_SET:-022}
+
+umask "$UMASK_SET"
+
+exec \
+	s6-setuidgid root /usr/sbin/dnsmasq --no-daemon --no-hosts --no-resolv --conf-file=/etc/dnsmasq.conf

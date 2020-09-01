@@ -1,0 +1,19 @@
+version: '3'
+## Based on https://github.com/hwdsl2/docker-ipsec-vpn-server
+
+services:
+  vpn:
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    image: gowowcore-vpn
+    restart: always
+    env_file:
+      - ./vpn.env
+    ports:
+      - "500:500/udp"
+      - "4500:4500/udp"
+    privileged: true
+    volumes:
+    - "./s6/scripts:/scripts"
+    - "/var/run/docker.sock:/var/run/docker.sock:ro"

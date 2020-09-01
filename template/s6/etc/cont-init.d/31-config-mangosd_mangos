@@ -68,11 +68,21 @@ else
 fi
 
 # mmap/vmap/etc stuff
+for folder in 'dbc' 'maps' 'mmaps' 'vmaps'; do
+	if [[ -e /app/etc/${folder} ]]; then
+		rm /app/etc/${folder}
+	fi
+	if [[ -d /config/${folder} ]]; then
+		ln -s "/config/${folder}" "/app/etc/${folder}"
+	fi
+done
+
 if [[ -d /config/mmaps ]]; then
 	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "mmap.enablePathFinding" "1"
 else
 	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "mmap.enablePathFinding" "0"
 fi
+
 if [[ -d /config/vmaps ]]; then
 	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "vmap.enableLOS" "1"
 	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "vmap.enableHeight" "1"

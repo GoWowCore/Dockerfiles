@@ -41,6 +41,8 @@ jobs:
   include:
   - env: PAYLOAD=base
     stage: base
+  - env: PAYLOAD=vpn-ipsec
+    stage: base
 
   - env: PAYLOAD=1.12.1-mangos-zero
     stage: packs

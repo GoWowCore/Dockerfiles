@@ -1,0 +1,32 @@
+#!/usr/bin/with-contenv bash
+# TODO: Enhance this and dnsmasq to handle multiple docker networks
+L2TP_NET=${VPN_L2TP_NET:-'192.168.42.0/24'}
+L2TP_LOCAL=${VPN_L2TP_LOCAL:-'192.168.42.1'}
+L2TP_POOL=${VPN_L2TP_POOL:-'192.168.42.10-192.168.42.250'}
+DOCKER_GW=$(ip route | awk '/^default/{print $3}')
+DOCKER_NIC=$(ip route | awk '/^default/{print $5}')
+DOCKER_NET=$(ip route | awk "/dev ${DOCKER_NIC} proto/{print \$1}")
+
+# Create IPTables rules
+iptables -I INPUT 1 -p udp --dport 1701 -m policy --dir in --pol none -j DROP
+iptables -I INPUT 2 -m conntrack --ctstate INVALID -j DROP
+iptables -I INPUT 3 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+iptables -I INPUT 4 -p udp -m multiport --dports 500,4500 -j ACCEPT
+iptables -I INPUT 5 -p udp --dport 1701 -m policy --dir in --pol ipsec -j ACCEPT
+iptables -I INPUT 6 -p udp --dport 1701 -j DROP
+
+iptables -I FORWARD 1 -m conntrack --ctstate INVALID -j DROP
+iptables -I FORWARD 2 -i eth+ -o ppp+ -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+iptables -I FORWARD 3 -i ppp+ -o eth+ -j ACCEPT
+iptables -I FORWARD 4 -i ppp+ -o ppp+ -s "$L2TP_NET" -d "$L2TP_NET" -j ACCEPT
+
+# Uncomment to disallow traffic between VPN clients
+# iptables -I FORWARD 2 -i ppp+ -o ppp+ -s "$L2TP_NET" -d "$L2TP_NET" -j DROP
+
+iptables -A FORWARD -j DROP
+if [[ "${LOCAL_ONLY}" == "true" ]]; then
+	iptables -t nat -I POSTROUTING -s "$L2TP_NET" -d "${DOCKER_NET}" -o eth+ -j MASQUERADE
+else
+	iptables -t nat -I POSTROUTING -s "$L2TP_NET" -o eth+ -j MASQUERADE
+fi
+

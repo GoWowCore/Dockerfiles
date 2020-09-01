@@ -1,0 +1,3 @@
+#!/usr/bin/with-contenv bash
+exec \
+	s6-setuidgid root /usr/sbin/docker-gen -watch -notify "s6-svc -r /var/run/s6/services/dnsmasq" /etc/tmpl/dnsmasq.tmpl /etc/dnsmasq.d/99-dynamic.conf

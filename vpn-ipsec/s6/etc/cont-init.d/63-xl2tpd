@@ -1,0 +1,63 @@
+#!/usr/bin/with-contenv bash
+if [[ ! -d /var/run/xl2tpd ]]; then
+	mkdir /var/run/xl2tpd
+fi
+L2TP_NET=${VPN_L2TP_NET:-'192.168.42.0/24'}
+L2TP_LOCAL=${VPN_L2TP_LOCAL:-'192.168.42.1'}
+L2TP_POOL=${VPN_L2TP_POOL:-'192.168.42.10-192.168.42.250'}
+
+# Create xl2tpd config
+cat > /etc/xl2tpd/xl2tpd.conf <<EOF
+[global]
+port = 1701
+
+[lns default]
+ip range = $L2TP_POOL
+local ip = $L2TP_LOCAL
+require authentication = yes
+name = l2tpd
+pppoptfile = /etc/ppp/options.xl2tpd
+length bit = yes
+
+ppp debug = yes
+unix authentication = yes
+require pap = yes
+EOF
+# require chap = yes
+# refuse pap = yes
+
+# Set xl2tpd options
+#+mschap-v2
+#ms-dns $DNS_SRV1
+cat > /etc/ppp/options.xl2tpd <<EOF
+ipcp-accept-local
+ipcp-accept-remote
+noccp
+auth
+mtu 1280
+mru 1280
+proxyarp
+lcp-echo-failure 4
+lcp-echo-interval 30
+connect-delay 5000
+
+name l2tpd
+login
+ms-dns ${L2TP_LOCAL}
+EOF
+
+# Set ppp extras
+cat > /etc/pam.d/ppp <<EOF
+# custom script auth
+auth	required	pam_exec.so expose_authtok /scripts/custom_login.sh
+account sufficient pam_permit.so
+#auth	required	pam_exec.so expose_authtok debug log=/tmp/debug.log /scripts/custom_login.sh
+#auth	[success=1 default=ignore]	pam_unix.so nullok_secure
+#auth	requisite	pam_deny.so
+#auth	required	pam_permit.so
+EOF
+
+cat > /etc/ppp/pap-secrets <<EOF
+*	*	""	*
+EOF
+#*       l2tpd           ""              *

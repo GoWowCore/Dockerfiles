@@ -1,0 +1,40 @@
+#!/usr/bin/with-contenv bash
+L2TP_NET=${VPN_L2TP_NET:-'192.168.42.0/24'}
+L2TP_LOCAL=${VPN_L2TP_LOCAL:-'192.168.42.1'}
+L2TP_POOL=${VPN_L2TP_POOL:-'192.168.42.10-192.168.42.250'}
+DOCKER_GW=$(ip route | awk '/^default/{print $3}')
+DOCKER_NIC=$(ip route | awk '/^default/{print $5}')
+DOCKER_NET=$(ip route | awk "/dev ${DOCKER_NIC} proto/{print \$1}")
+
+cat > /etc/dnsmasq.conf <<EOF
+conf-dir=/etc/dnsmasq.d
+user=root
+EOF
+
+cat > /etc/dnsmasq.d/00-local.conf <<EOF
+no-negcache
+no-resolv
+#server=127.0.0.11
+#server=/${ROOT_DOMAIN}/127.0.0.11
+
+log-queries
+
+#domain-needed
+
+domain=${ROOT_DOMAIN}
+expand-hosts
+local=/${ROOT_DOMAIN}/
+EOF
+
+cat > /etc/dnsmasq.d/01-dhcpinform.conf <<EOF
+#dhcp-authoritative
+#dhcp-option-force=15,${ROOT_DOMAIN}
+#dhcp-option-force=119,${ROOT_DOMAIN}
+
+
+dhcp-range=${L2TP_LOCAL},static
+dhcp-option-force=3,${L2TP_LOCAL}
+dhcp-option-force=6,${L2TP_LOCAL}
+dhcp-option=121,${L2TP_NET},${L2TP_LOCAL},${DOCKER_NET},${L2TP_LOCAL}
+dhcp-option=249,${L2TP_NET},${L2TP_LOCAL},${DOCKER_NET},${L2TP_LOCAL}
+EOF

@@ -1,0 +1,24 @@
+# Auto generated
+{{ $CurrentContainer := where $ "ID" .Docker.CurrentContainerID | first }}
+{{ $VpnNetworkName := ( first $CurrentContainer.Networks ).Name }}
+{{ $RootDomain := .Env.ROOT_DOMAIN }}
+
+{{range $key, $value := .}}
+{{ $VpnNetwork := where $value.Networks "Name" $VpnNetworkName | first }}
+{{ $DomainOverride := (index $value.Labels "com.gowowcore.dns.domain") }}
+### {{ $value.Name }} ({{$value.ID}} from {{$value.Image.Repository}})
+
+{{ if $VpnNetwork.IP }}
+address=/{{ $value.Name }}/{{ $VpnNetwork.IP }}
+
+{{ if $RootDomain }}
+address=/{{ $value.Name }}.{{ $RootDomain }}/{{ $VpnNetwork.IP }}
+{{end}}
+
+{{ if $DomainOverride }}
+address=/{{ $DomainOverride }}/{{ $VpnNetwork.IP }}
+{{end}}
+
+{{end}}
+
+{{end}}

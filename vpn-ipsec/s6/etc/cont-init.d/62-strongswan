@@ -1,0 +1,37 @@
+#!/usr/bin/with-contenv bash
+L2TP_NET=${VPN_L2TP_NET:-'192.168.42.0/24'}
+L2TP_LOCAL=${VPN_L2TP_LOCAL:-'192.168.42.1'}
+L2TP_POOL=${VPN_L2TP_POOL:-'192.168.42.10-192.168.42.250'}
+
+cat > /etc/ipsec.conf <<EOF
+version 2.0
+
+config setup
+  uniqueids=no
+
+conn shared
+  left=%defaultroute
+  right=%any
+  forceencaps=yes
+  authby=secret
+  rekey=no
+  keyingtries=5
+  dpddelay=30
+  dpdtimeout=120
+  dpdaction=clear
+  ike=aes128-sha1-modp1024,aes256-md5-modp1024,aes128-sha1-modp1024,aes128-md5-modp1024,3des-sha1-modp1024,3des-md5-modp1024
+
+conn l2tp-psk
+  auto=add
+  leftprotoport=17/1701
+  rightprotoport=17/%any
+  type=transport
+  also=shared
+
+include /etc/ipsec.d/*.conf
+EOF
+
+# Specify IPsec PSK
+cat > /etc/ipsec.secrets <<EOF
+%any %any : PSK "$VPN_IPSEC_PSK"
+EOF
