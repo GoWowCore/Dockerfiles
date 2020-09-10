@@ -17,5 +17,5 @@ RUN \
     rm -rf /var/lib/apt/lists/* /tmp/docker-gen.tar.gz
 
 EXPOSE 500/udp 4500/udp
-
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 COPY s6/ /
