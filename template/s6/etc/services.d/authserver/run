@@ -1,17 +1,18 @@
 #!/usr/bin/with-contenv bash
 cd /app/bin
-case "${CORE}" in
-	"trinitycore"|"azerothcore")
-		exec \
-			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/authserver -c /app/etc/authserver.conf
-#			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/authserver -c /config/${AUTHSERVER_CONFIGFILE}
-		;;
-	"mangos")
-		exec \
-			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/realmd -c /app/etc/realmd.conf
-#			/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc /app/bin/realmd -c /config/${AUTHSERVER_CONFIGFILE}
-		;;
-	*)
-		exit 1
-		;;
-esac
+BINARY=""
+CFG=""
+if [[ -x /app/bin/authserver ]]; then
+	BINARY="/app/bin/authserver"
+	CFG="/app/etc/authserver.conf"
+elif [[ -x /app/bin/realmd ]]; then
+	BINARY="/app/bin/realmd"
+	CFG="/app/etc/realmd.conf"
+fi
+
+if [[ -z "${BINARY}" || -z "${CFG}" ]]; then
+	exit 1
+fi
+
+exec \
+	/usr/bin/screen -D -m -S AUTHSERVER s6-setuidgid abc "${BINARY}" -c "${CFG}"

@@ -51,10 +51,8 @@ for entry in ${targets[@]}; do
 		if [[ ! -d "${FOLDER}" ]]; then
 			mkdir "${FOLDER}"
 		fi
-#		rsync -av --delete "${DIR}/template/." "${FOLDER}/."
 		for x in $(ls -1 ${DIR}/template/*.yml); do
 			filename=$(basename ${x})
-#			rsync -av --delete "${DIR}/template/${filename}" "${FOLDER}/${filename}"
 			ln -s ../template/${filename} "${FOLDER}/${filename}"
 		done
 
@@ -74,7 +72,7 @@ EOF
 done
 
 # Extra for VPN container
-if [[ ! -d "${DIR}/vpn-ipsec/s6/gowowcore" ]]; then
-	mkdir -p "${DIR}/vpn-ipsec/s6/gowowcore"
+if [[ ! -d "${DIR}/accessory/vpn-ipsec/s6/gowowcore" ]]; then
+	mkdir -p "${DIR}/accessory/vpn-ipsec/s6/gowowcore"
 fi
-rsync -av --delete "${DIR}/template/s6/gowowcore/." "${DIR}/vpn-ipsec/s6/gowowcore/."
+rsync -av --delete "${DIR}/template/s6/gowowcore/." "${DIR}/accessory/vpn-ipsec/s6/gowowcore/."

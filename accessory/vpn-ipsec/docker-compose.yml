@@ -6,7 +6,7 @@ services:
     build:
       context: "."
       dockerfile: Dockerfile
-    image: gowowcore-vpn
+    image: gowowcore-vpn-ipsec
     restart: always
     env_file:
       - ./vpn.env

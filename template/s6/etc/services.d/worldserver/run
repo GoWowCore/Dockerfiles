@@ -1,17 +1,23 @@
 #!/usr/bin/with-contenv bash
 cd /app/bin
-case "${CORE}" in
-	"trinitycore"|"azerothcore")
-		exec \
-			/usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /app/bin/worldserver -c /app/etc/worldserver.conf
-#			/usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /app/bin/worldserver -c /config/${WORLDSERVER_CONFIGFILE}
-		;;
-	"mangos")
-		exec \
-			/usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /app/bin/mangosd -c /app/etc/mangosd.conf
-#			/usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc /app/bin/mangosd -c /config/${WORLDSERVER_CONFIGFILE}
-		;;
-	*)
-		exit 1
-		;;
-esac
+BINARY=""
+CFG=""
+
+SHELL_COMMAND=()
+if [[ -x /app/bin/worldserver ]]; then
+        SHELL_COMMAND+=("/app/bin/worldserver" "-c" "/app/etc/worldserver.conf")
+elif [[ -x /app/bin/mangosd ]]; then
+        SHELL_COMMAND+=("/app/bin/mangosd" "-c" "/app/etc/mangosd.conf")
+fi
+
+if [[ "${SHELL_COMMAND[0]}" == "/app/bin/mangosd" && -e /app/etc/ahbot.conf ]]; then
+	SHELL_COMMAND+=("--ahbot" "/app/etc/ahbot.conf")
+fi
+
+if [[ ${#SHELL_COMMAND[@]} -eq 0 ]]; then
+        exit 1
+fi
+
+exec \
+        /usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc ${SHELL_COMMAND[@]}
+#        /usr/bin/screen -D -m -S WORLDSERVER s6-setuidgid abc "${BINARY}" -c "${CFG}"

@@ -1,0 +1,97 @@
+#!/usr/bin/with-contenv bash
+
+source /gowowcore/_conf.sh
+
+if [[ "${AUTHSERVER}" == "true" ]]; then
+	if [[ -e /etc/services.d/authserver/down ]]; then
+		rm /etc/services.d/authserver/down
+	fi
+
+	if [[ -e /app/etc/authserver.conf.dist ]]; then
+		if [[ ! -e "/config/${AUTHSERVER_CONFIGFILE}" ]]; then
+			cp /app/etc/authserver.conf.dist "/config/${AUTHSERVER_CONFIGFILE}"
+		fi
+		if [[ -e /app/etc/authserver.conf ]]; then
+			rm /app/etc/authserver.conf
+		fi
+		ln -s "/config/${AUTHSERVER_CONFIGFILE}" /app/etc/authserver.conf
+
+	elif [[ -e /app/etc/realmd.conf.dist ]]; then
+		if [[ ! -e "/config/${AUTHSERVER_CONFIGFILE}" ]]; then
+			cp /app/etc/realmd.conf.dist "/config/${AUTHSERVER_CONFIGFILE}"
+		fi
+		if [[ -e /app/etc/realmd.conf ]]; then
+			rm /app/etc/realmd.conf
+		fi
+		ln -s "/config/${AUTHSERVER_CONFIGFILE}" /app/etc/realmd.conf
+
+	else
+		echo "[***] AUTHSERVER: Could not determine authserver/realmd"
+		exit 1
+	fi
+else
+	touch /etc/services.d/authserver/down
+fi
+
+if [[ "${WORLDSERVER}" == "true" ]]; then
+	if [[ -e /etc/services.d/worldserver/down ]]; then
+		rm /etc/services.d/worldserver/down
+	fi
+
+	if [[ -e /app/etc/worldserver.conf.dist ]]; then
+		if [[ ! -e "/config/${WORLDSERVER_CONFIGFILE}" ]]; then
+			cp /app/etc/worldserver.conf.dist "/config/${WORLDSERVER_CONFIGFILE}"
+		fi
+		if [[ -e /app/etc/worldserver.conf ]]; then
+			rm /app/etc/worldserver.conf
+		fi
+		ln -s "/config/${WORLDSERVER_CONFIGFILE}" /app/etc/worldserver.conf
+
+	elif [[ -e /app/etc/mangosd.conf.dist ]]; then
+		if [[ ! -e "/config/${WORLDSERVER_CONFIGFILE}" ]]; then
+			cp /app/etc/mangosd.conf.dist "/config/${WORLDSERVER_CONFIGFILE}"
+		fi
+		if [[ ! -e "/config/${WORLDSERVER_AH_CONFIGFILE}" ]]; then
+			cp /app/etc/ahbot.conf.dist "/config/${WORLDSERVER_AH_CONFIGFILE}"
+		fi
+		for cfg_file in 'mangosd.conf' 'ahbot.conf'; do
+			if [[ -e /app/etc/${cfg_file} ]]; then
+				rm /app/etc/${cfg_file}
+			fi
+		done
+		ln -s "/config/${WORLDSERVER_CONFIGFILE}" /app/etc/mangosd.conf
+		ln -s "/config/${WORLDSERVER_AH_CONFIGFILE}" /app/etc/ahbot.conf
+
+	else
+		echo "[***] WORLDSERVER: Could not determine worldserver/mangosd"
+		exit 1
+	fi
+else
+	touch /etc/services.d/worldserver/down
+fi
+
+# Set directories
+for x in "/config/${AUTHSERVER_CONFIGFILE}" "/config/${WORLDSERVER_CONFIGFILE}" "/config/${WORLDSERVER_AH_CONFIGFILE}"; do
+	if [[ -e "${x}" ]]; then
+		for entry in 'DataDir,/config' 'LogsDir,/config' 'SourceDirectory,/src/server'; do
+			CONF_PARAM=${entry%,*}
+			CONF_VALUE=${entry#*,}
+			CONFsetQuoted "${x}" "${CONF_PARAM}" "${CONF_VALUE}"
+		done
+	fi
+done
+
+# Set logfile configs
+for x in "/config/${AUTHSERVER_CONFIGFILE}" "/config/${WORLDSERVER_CONFIGFILE}"; do
+	if [[ -e "${x}" ]]; then
+		for entry in 'SQLDriverLogFile,SQLDriver.log'; do
+			CONF_PARAM=${entry%,*}
+			CONF_VALUE=${entry#*,}
+			PREFIX="authserver"
+			if [[ "${x}" == "/config/${WORLDSERVER_CONFIGFILE}" ]]; then
+				PREFIX="worldserver-${WORLDSERVER_NAME}"
+			fi
+			CONFsetQuoted "${x}" "${CONF_PARAM}" "${PREFIX}-${CONF_VALUE}"
+		done
+	fi
+done

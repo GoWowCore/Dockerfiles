@@ -1,0 +1,97 @@
+#!/usr/bin/with-contenv bash
+# Exit if worldserver is not enabled
+if [[ "${WORLDSERVER}" != "true" ]]; then
+	exit 0
+fi
+
+# Generate symlinks
+function GENsymlinks {
+	for folder in 'dbc' 'maps' 'mmaps' 'vmaps'; do
+		if [[ -e /app/etc/${folder} ]]; then
+			rm /app/etc/${folder}
+		fi
+		if [[ -d /config/${folder} ]]; then
+			ln -s "/config/${folder}" "/app/etc/${folder}"
+		fi
+	done
+}
+
+GENsymlinks
+
+## Exit early if no source folder
+if [[ ! -d /wow || ! -d /wow/Data ]]; then
+	echo "[***] WoW folder not detected at /wow. Skipping preparing any maps, vmaps, mmaps."
+	echo "[***] This is not an issue if you've already loaded anything you need into the /config volume."
+	exit 0
+fi
+
+## Folder is present, process missing data
+if [[ ! -d /config/dbc || ! -d /config/maps ]]; then
+	echo "[***] DBC and Maps: generating files"
+	cd /wow
+	if [[ -e /app/bin/mapextractor ]]; then
+		/app/bin/mapextractor
+	elif [[ -e /app/bin/tools/map-extractor ]]; then
+		/app/bin/tools/map-extractor
+	else
+		echo "[***] DBC and Maps: failed to find map extractor in /app/bin/(trinity) or /app/bin/tools/(mangos)"
+		exit 1
+	fi
+	cp -r dbc maps /config
+	echo "[***] DBC and Maps: complete"
+fi
+
+if [[ ! -d /config/vmaps ]]; then
+	echo "[***] Visual maps: generating files"
+	cd /wow
+	if [[ -e /app/bin/vmap4extractor ]]; then
+		/app/bin/vmap4extractor
+		mkdir vmaps
+		/app/bin/vmap4assembler Buildings vmaps
+	elif [[ -e /app/bin/tools/vmap-extractor ]]; then
+		/app/bin/tools/vmap-extractor
+	else
+		echo "[***] Visual maps: failed to find extractor in /app/bin or /app/bin/tools"
+	fi
+	if [[ -d /wow/vmaps ]]; then
+		cp -r vmaps /config
+		echo "[***] Visual maps: complete"
+	else
+		echo "[***] Visual maps: Output folder not found, skipping"
+	fi
+fi
+
+if [[ ! -d /config/mmaps ]]; then
+	echo "[***] Movement maps: generating files"
+	cd /wow
+	if [[ -e /app/bin/mmaps_generator ]]; then
+		/app/bin/mmaps_generator
+	elif [[ -e /app/bin/tools/mmap-extractor ]]; then
+		for x in 'MoveMapGen.sh' 'offmesh.txt' 'mmap_excluded.txt' 'tools/mmap-extractor'; do
+			cp /app/bin/${x} /wow/
+		done
+		chmod +x /wow/MoveMapGen.sh /wow/mmap-extractor
+		./MoveMapGen.sh 4
+		for x in 'MoveMapGen.sh' 'offmesh.txt' 'mmap_excluded.txt' 'mmap-extractor'; do
+			rm /wow/${x}
+		done
+	else
+		echo "[***] Movement maps: failed to find extractor in /app/bin or /app/bin/tools"
+	fi
+	if [[ -d /wow/mmaps ]]; then
+		cp -r mmaps /config
+		echo "[***] Movement maps: complete"
+	else
+		echo "[***] Movement maps: Output folder not found, skipping"
+	fi
+fi
+
+# Cleanup
+for x in 'dbc' 'maps' 'vmaps' 'mmaps' 'Buildings'; do
+	if [[ -d /wow/${x} ]]; then
+		echo "[***] Cleaning up ${x} from /wow folder"
+		rm -R /wow/${x}
+	fi
+done
+
+GENsymlinks

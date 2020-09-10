@@ -1,7 +1,4 @@
 #!/usr/bin/with-contenv bash
-if [[ "${CORE}" != "mangos" && "${CORE}" != "trinitycore" && "${CORE}" != "azerothcore" ]]; then
-	exit 0
-fi
 # Exit if authserver is not enabled
 if [[ "${AUTHSERVER}" != "true" ]]; then
 	exit 0

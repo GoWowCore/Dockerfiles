@@ -1,7 +1,4 @@
 #!/usr/bin/with-contenv bash
-if [[ "${CORE}" != "mangos" && "${CORE}" != "trinitycore" && "${CORE}" != "azerothcore" ]]; then
-	exit 0
-fi
 # Exit if worldserver is not enabled
 if [[ "${WORLDSERVER}" != "true" ]]; then
 	exit 0

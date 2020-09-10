@@ -1,7 +1,4 @@
 #!/usr/bin/with-contenv bash
-if [[ "${CORE}" != "mangos" ]]; then
-	exit 0
-fi
 # Exit if authserver is not enabled
 if [[ "${AUTHSERVER}" != "true" ]]; then
 	exit 0
@@ -10,7 +7,7 @@ fi
 source /gowowcore/_conf.sh
 
 entries=(
-	'RealmServerPort,AUTHSERVER_PORT'
+        'RealmServerPort,AUTHSERVER_PORT'
 )
 for entry in ${entries[@]}; do
 	CONF_PARAM=${entry%,*}
@@ -39,3 +36,15 @@ for entry in ${entries[@]}; do
 		echo "[***] ERROR: ${!CONF_ENV} format is invalid. Should be 'mysql://user:password@hostname:port/database_name'"
 	fi
 done
+
+# Trinitycore Handles DB behaviors directly
+entries=(
+	'Updates.EnableDatabases'
+	'Updates.AutoSetup'
+	'Updates.Redundancy'
+	'Updates.AllowRehash'
+)
+for CONF_PARAM in ${entries[@]}; do
+        CONFsetRaw "/config/${AUTHSERVER_CONFIGFILE}" "${CONF_PARAM}" "1"
+done
+

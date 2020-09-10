@@ -1,0 +1,57 @@
+#!/usr/bin/with-contenv bash
+# Exit if worldserver is not enabled
+if [[ "${WORLDSERVER}" != "true" ]]; then
+        exit 0
+fi
+
+source /gowowcore/_sql.sh
+source /gowowcore/_conf.sh
+
+SQLextractCreds "LoginDatabaseInfo" "/config/${WORLDSERVER_CONFIGFILE}"
+SQLwaitPort
+SQLwaitUser
+
+SQLwaitTable "realmlist"
+
+if [[ -z "${WORLDSERVER_REALMID}" ]]; then
+	WORLDSERVER_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${WORLDSERVER_NAME}';")
+fi
+
+declare -A queryArgs
+if [[ -n "${WORLDSERVER_REALMID}" ]]; then
+	queryArgs[id]="${WORLDSERVER_REALMID}"
+fi
+queryArgs[name]="'${WORLDSERVER_NAME}'"
+queryArgs[address]="'${WORLDSERVER_ADDRESS}'"
+queryArgs[port]="${WORLDSERVER_PORT}"
+queryArgs[icon]="${WORLDSERVER_ICON}"
+queryArgs[timezone]="${WORLDSERVER_TZ}"
+queryArgs[allowedSecurityLevel]="${WORLDSERVER_MINSECURITY}"
+# TODO: See if I can mix+match worlds with authservers
+if [[ -x /app/bin/mangosd ]]; then
+	# mangos
+	queryArgs[realmbuilds]="${WORLDSERVER_GAMEBUILD}"
+elif [[ -x /app/bin/worldserver && $(/app/bin/worldserver --version | cut -d ' ' -f1) == "TrinityCore" ]]; then
+	# trinity
+	queryArgs[gamebuild]="${WORLDSERVER_GAMEBUILD}"
+fi
+# TODO: azerothcore
+
+# Build realmlist sql query
+columns=""
+values=""
+for col in "${!queryArgs[@]}"; do
+	if [[ -n "${columns}" ]]; then
+		columns="${columns},"
+	fi
+	columns="${columns}\`${col}\`"
+	if [[ -n "${values}" ]]; then
+		values="${values},"
+	fi
+	values="${values}${queryArgs[$col]}"
+done
+query="REPLACE INTO \`realmlist\` (${columns}) VALUES (${values});"
+SQLuser "${query}"
+
+WORLDSERVER_REALMID=$(SQLuser "SELECT \`id\` FROM \`realmlist\` WHERE \`name\`='${WORLDSERVER_NAME}';")
+CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "RealmID" "${WORLDSERVER_REALMID}"

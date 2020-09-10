@@ -1,15 +1,12 @@
 #!/usr/bin/with-contenv bash
-if [[ "${CORE}" != "trinitycore" && "${CORE}" != "azerothcore" ]]; then
-	exit 0
-fi
+# Exit if worldserver is not enabled
 if [[ "${WORLDSERVER}" != "true" ]]; then
 	exit 0
 fi
 
 source /gowowcore/_conf.sh
 
-## SQL Configs
-sql_regex="^mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.*)$"
+### SQL Configs
 entries=(
 	'LoginDatabaseInfo,AUTH_SQL'
 	'CharacterDatabaseInfo,CHARACTER_SQL'
@@ -46,25 +43,15 @@ for entry in ${entries[@]}; do
 	fi
 done
 
-# Quoted configs
-# Don't override IP Bindings, let user do via config file directly
-#entries=(
-#	'BindIP,WORLDSERVER_ADDRESS'
-#	'SOAP.IP,WORLDSERVER_SOAP_ADDRESS'
-#)
-#for entry in ${entries[@]}; do
-#	CONF_PARAM=${entry%,*}
-#	CONF_ENV=${entry#*,}
-#	if [[ -n "${!CONF_ENV}" ]]; then
-#		CONFsetQuoted "/config/${WORLDSERVER_CONFIGFILE}" "${CONF_PARAM}" "${!CONF_ENV}"
-#	fi
-#done
 
 if [[ "${WORLDSERVER_SOAP}" == "true" ]]; then
 	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "SOAP.Enabled" "1"
 else
 	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "SOAP.Enabled" "0"
 fi
+
+# Disables interactive console use, may be able to pull the screen wrapper at some point
+CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "Console.Enable" "0"
 
 # mmap/vmap/etc stuff
 if [[ -d /config/mmaps ]]; then
@@ -81,3 +68,17 @@ else
 	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "vmap.enableHeight" "0"
 	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "vmap.enableIndoorCheck" "0"
 fi
+
+
+# Trinitycore Handles DB behaviors directly
+entries=(
+        'Updates.EnableDatabases,6'
+        'Updates.AutoSetup,1'
+        'Updates.Redundancy,1'
+        'Updates.AllowRehash,1'
+)
+for entry in ${entries[@]}; do
+	CONF_PARAM=${entry%,*}
+	CONF_VAL=${entry#*,}
+        CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "${CONF_PARAM}" "${CONF_VAL}"
+done

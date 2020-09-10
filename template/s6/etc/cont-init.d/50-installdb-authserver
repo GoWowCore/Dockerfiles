@@ -1,0 +1,119 @@
+#!/usr/bin/with-contenv bash
+# Exit if worldserver is not enabled
+if [[ "${AUTHSERVER}" != "true" ]]; then
+        exit 0
+fi
+
+source /gowowcore/_sql.sh
+source /gowowcore/_conf.sh
+
+# Trinitycore is configured to handle DB installation/updates directly
+
+SQLextractCreds "LoginDatabaseInfo" "/config/${AUTHSERVER_CONFIGFILE}"
+SQLwaitPort
+SQLwaitUser
+
+# Install AuthDB
+
+if [[ -e /src/db/Realm/Setup/realmdLoadDB.sql ]]; then
+	# mangos
+	# Install DB if version table is missing
+        if [[ $(SQLuser "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
+                echo "[***] Couldn't find db_version table in ${SQL_DB}. Installing LoginDatabaseInfo to ${SQL_DB}."
+                SQLuserFile "/src/db/Realm/Setup/realmdLoadDB.sql"
+        fi
+	DB_VERSION=$(SQLuser "SELECT \`version\` FROM \`db_version\` ORDER BY \`version\` DESC, \`structure\` DESC LIMIT 0,1;")
+        echo "[***] LoginDatabaseInfo installed is ${DB_VERSION}"
+elif [[ -d /src/server/data/sql/base/db_auth ]]; then
+	# azerothcore
+        for table_sql in $(ls -1 "/src/server/data/sql/base/db_auth/"); do
+                table=${table_sql%.*}
+                if ! SQLexistTable "${table}"; then
+                        SQLuserFile "/src/server/data/sql/base/db_auth/${table_sql}"
+                fi
+        done
+fi
+
+# Initiate relevant migrations
+if [[ -n "${DB_VERSION}" && -d "/src/db/Realm/Updates/Rel${DB_VERSION}" ]]; then
+        # Mangos
+        echo "[***] Running all available Auth DB updates"
+        for x in $(ls -1 /src/db/Realm/Updates/Rel${DB_VERSION}/*.sql | sort -n); do
+                sed -i 's#DEFINER=`root`@`localhost`##g' "${x}"
+                SQLuserFile "${x}"
+        done
+elif [[ -d /src/server/data/sql/updates/db_auth ]]; then
+        # azerothcore
+        echo "[***] Running all available Auth DB updates"
+        for migration_sql in $(ls -1 "/src/server/data/sql/updates/db_auth/"); do
+                SQLuserFile "/src/server/data/sql/updates/db_auth/${migration_sql}"
+        done
+fi
+
+# Clean out default accounts, replace with our default "admin:admin" user
+if [[ -e /src/db/Realm/Setup/realmdLoadDB.sql ]]; then
+	# mangos
+	# Clear default users
+	entries=(
+		'1,ADMINISTRATOR,a34b29541b87b7e4823683ce6c7bf6ae68beaaac'
+		'2,GAMEMASTER,7841e21831d7c6bc0b57fbe7151eb82bd65ea1f9'
+		'3,MODERATOR,a7f5fbff0b4eec2d6b6e78e38e8312e64d700008'
+		'4,PLAYER,3ce8a96d17c5ae88a30681024e86279f1a38c041'
+	)
+	for entry in ${entries[@]}; do
+		regex="^([^,]+),([^,]+),([^,]+)"
+	        if [[ ${entry} =~ $regex ]]; then
+	                U_ID=${BASH_REMATCH[1]}
+	                U_NAME=${BASH_REMATCH[2]}
+                	U_HASH=${BASH_REMATCH[3]}
+			SQLuser "DELETE FROM \`account\` WHERE \`id\`=${U_ID} AND \`username\`='${U_NAME}' AND \`sha_pass_hash\`='${U_HASH}' AND \`sessionkey\`='' AND \`last_login\`='';"
+		fi
+	done
+	# Create default user admin/admin
+	SQLuser "INSERT IGNORE INTO \`account\` (\`id\`, \`username\`, \`sha_pass_hash\`, \`gmlevel\`, \`expansion\`) VALUES (1, 'admin', SHA1(CONCAT(UPPER('admin'), ':', UPPER('admin'))), 3, 0);"
+elif [[ -d /src/server/data/sql/base/db_auth ]]; then
+	# azerothcore
+	# Clear default users
+	entries=(
+		'1,test1,047ce22643f9b0bd6baeb18d51bf1075a4d43fc6'
+		'2,test2,10eb1ff16cf5380147e8281cd8080a210ecb3c53'
+		'3,test3,e546bbf9ca93ae5291f0b441bb9ea2fa0c466176'
+		'4,test4,61015d83b456a9c6a7defdff07f55265f24097af'
+		'5,test5,dddeac4ffe5f286ec57b7a1ed63bf3a859debe1e'
+		'6,test6,f1f94cdffd83c8c4182d66689077f92c807ab579'
+		'7,test7,6fcd35c35b127be1d9ca040b2b478eb366506ce2'
+		'8,test8,484332ccb02e284e4e0a04573c3fa417f4745fdf'
+		'9,test9,4fce15ed251721f02754d5381ae9d0137b6a6a30'
+		'10,test10,b22d249228e84ab493b39a2bd765bee9b7c0b350'
+	)
+	for entry in ${entries[@]}; do
+		regex="^([^,]+),([^,]+),([^,]+)"
+	        if [[ ${entry} =~ $regex ]]; then
+	                U_ID=${BASH_REMATCH[1]}
+	                U_NAME=${BASH_REMATCH[2]}
+                	U_HASH=${BASH_REMATCH[3]}
+			SQLuser "DELETE \`account\`,\`account_access\` FROM \`account\` INNER JOIN \`account_access\` ON \`account\`.\`id\` = \`account_access\`.\`id\` WHERE \`account\`.\`id\`=${U_ID} AND \`account\`.\`username\`='${U_NAME}' AND \`account\`.\`sha_pass_hash\`='${U_HASH}' AND \`account\`.\`sessionkey\`='' AND \`account\`.\`last_login\` IS NULL;"
+		fi
+	done
+	# Create default user admin/admin
+	SQLuser "INSERT IGNORE INTO \`account\` (\`id\`,\`username\`,\`sha_pass_hash\`) VALUES ( 1, 'admin', SHA1(CONCAT(UPPER('admin'), ':', UPPER('admin'))));"
+	SQLuser "INSERT IGNORE INTO \`account_access\` (\`id\`, \`gmlevel\`, \`RealmID\`) VALUES (1, 4, -1);"
+elif [[ -x /app/bin/authserver && $(/app/bin/authserver --version | cut -d ' ' -f1) == "TrinityCore" ]]; then
+	# trinitycore
+	(
+		# Wait for SQL to be up
+		source /gowowcore/_sql.sh
+		SQLextractCreds "LoginDatabaseInfo" "/config/${AUTHSERVER_CONFIGFILE}"
+		SQLwaitPort
+		# Wait for tables to exist
+		for table in 'account' 'rbac_account_permissions' 'realmlist'; do
+			SQLwaitTable "${table}"
+		done
+
+		# Trinitycore doesn't create initial user, no cleanup
+		# Create default user admin/admin
+		# TODO: Trinitycore deprecated sha_pass_hash use recently, so this probably fails
+		SQLuser "INSERT IGNORE INTO \`account\` (\`id\`,\`username\`,\`sha_pass_hash\`) VALUES ( 1, 'admin', SHA1(CONCAT(UPPER('admin'), ':', UPPER('admin'))));"
+		SQLuser "INSERT IGNORE INTO \`rbac_account_permissions\` (\`accountId\`, \`permissionId\`, \`granted\`, \`realmId\`) VALUES (1, 3, 1, -1);"
+	) &
+fi
