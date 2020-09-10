@@ -73,13 +73,13 @@ fi
 
 # Trinitycore Handles DB behaviors directly
 entries=(
-        'Updates.EnableDatabases,6'
-        'Updates.AutoSetup,1'
-        'Updates.Redundancy,1'
-        'Updates.AllowRehash,1'
+	'Updates.EnableDatabases,6'
+	'Updates.AutoSetup,1'
+	'Updates.Redundancy,1'
+	'Updates.AllowRehash,1'
 )
 for entry in ${entries[@]}; do
 	CONF_PARAM=${entry%,*}
 	CONF_VAL=${entry#*,}
-        CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "${CONF_PARAM}" "${CONF_VAL}"
+	CONFsetRaw "/config/${WORLDSERVER_CONFIGFILE}" "${CONF_PARAM}" "${CONF_VAL}"
 done

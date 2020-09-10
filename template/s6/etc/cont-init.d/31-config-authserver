@@ -7,7 +7,7 @@ fi
 source /gowowcore/_conf.sh
 
 entries=(
-        'RealmServerPort,AUTHSERVER_PORT'
+	'RealmServerPort,AUTHSERVER_PORT'
 )
 for entry in ${entries[@]}; do
 	CONF_PARAM=${entry%,*}
@@ -45,6 +45,6 @@ entries=(
 	'Updates.AllowRehash'
 )
 for CONF_PARAM in ${entries[@]}; do
-        CONFsetRaw "/config/${AUTHSERVER_CONFIGFILE}" "${CONF_PARAM}" "1"
+	CONFsetRaw "/config/${AUTHSERVER_CONFIGFILE}" "${CONF_PARAM}" "1"
 done
 

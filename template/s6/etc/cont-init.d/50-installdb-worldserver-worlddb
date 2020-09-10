@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 # Exit if worldserver is not enabled
 if [[ "${WORLDSERVER}" != "true" ]]; then
-        exit 0
+	exit 0
 fi
 
 source /gowowcore/_sql.sh
@@ -21,6 +21,9 @@ if [[ -e /src/db/World/Setup/mangosdLoadDB.sql ]]; then
 	if [[ $(SQLuser "SHOW TABLES LIKE 'db_version';" | wc -l) -eq 0 ]]; then
 		echo "[***] Couldn't find db_version table in ${SQL_DB}. Installing WorldDatabaseInfo to ${SQL_DB}."
 		SQLuserFile "/src/db/World/Setup/mangosdLoadDB.sql"
+		for x in $(ls -1 /src/db/World/Setup/FullDB/*.sql); do
+			SQLuserFile "${x}"
+		done
 	fi
 	# Get DB version
 	DB_VERSION=$(SQLuser "SELECT \`version\` FROM \`db_version\` ORDER BY \`version\` DESC, \`structure\` DESC LIMIT 0,1;")
@@ -41,15 +44,15 @@ fi
 if [[ -n "${DB_VERSION}" && -d "/src/db/World/Updates/Rel${DB_VERSION}" ]]; then
 	# Mangos
 	echo "[***] Running all available World DB updates"
-        for x in $(ls -1 /src/db/World/Updates/Rel${DB_VERSION}/*.sql | sort -n); do
-                sed -i 's#DEFINER=`root`@`localhost`##g' "${x}"
-                SQLuserFile "${x}"
-        done
+	for x in $(ls -1 /src/db/World/Updates/Rel${DB_VERSION}/*.sql | sort -n); do
+		sed -i 's#DEFINER=`root`@`localhost`##g' "${x}"
+		SQLuserFile "${x}"
+	done
 elif [[ -d /src/server/data/sql/updates/db_world ]]; then
 	echo "[***] Running all available World DB updates"
 	# azerothcore
-        for migration_sql in $(ls -1 "/src/server/data/sql/updates/db_world/"); do
-                SQLuserFile "/src/server/data/sql/updates/db_world/${migration_sql}"
-        done
+	for migration_sql in $(ls -1 "/src/server/data/sql/updates/db_world/"); do
+		SQLuserFile "/src/server/data/sql/updates/db_world/${migration_sql}"
+	done
 
 fi
