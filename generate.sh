@@ -71,8 +71,11 @@ EOF
 	fi
 done
 
-# Extra for VPN container
-if [[ ! -d "${DIR}/accessory/vpn-ipsec/s6/gowowcore" ]]; then
-	mkdir -p "${DIR}/accessory/vpn-ipsec/s6/gowowcore"
-fi
-rsync -av --delete "${DIR}/template/s6/gowowcore/." "${DIR}/accessory/vpn-ipsec/s6/gowowcore/."
+# Extra for accessory containers
+entries=( $(ls -1 "${DIR}/accessory") )
+for entry in ${entries[@]}; do
+	if [[ ! -d "${DIR}/accessory/${entry}/s6/gowowcore" ]]; then
+		mkdir -p "${DIR}/accessory/${entry}/s6/gowowcore"
+	fi
+	rsync -av --delete "${DIR}/template/s6/gowowcore/." "${DIR}/accessory/${entry}/s6/gowowcore/."
+done

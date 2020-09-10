@@ -30,7 +30,7 @@ queryArgs[allowedSecurityLevel]="${WORLDSERVER_MINSECURITY}"
 # TODO: See if I can mix+match worlds with authservers
 if [[ -x /app/bin/mangosd ]]; then
 	# mangos
-	queryArgs[realmbuilds]="${WORLDSERVER_GAMEBUILD}"
+	queryArgs[realmbuilds]="'${WORLDSERVER_GAMEBUILD}'"
 elif [[ -x /app/bin/worldserver && $(/app/bin/worldserver --version | cut -d ' ' -f1) == "TrinityCore" ]]; then
 	# trinity
 	queryArgs[gamebuild]="${WORLDSERVER_GAMEBUILD}"
