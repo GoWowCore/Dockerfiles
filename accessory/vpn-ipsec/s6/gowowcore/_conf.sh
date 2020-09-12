@@ -4,7 +4,7 @@ function CONFsetRaw {
 	PARAM="${2}"
 	VALUE="${3}"
 
-	sed -i "s#^${PARAM} .*#${PARAM} = ${VALUE}#g" "${CFG_FILE}"
+	sed -i "s^${PARAM} .*${PARAM} = ${VALUE}g" "${CFG_FILE}"
 }
 
 function CONFsetQuoted {

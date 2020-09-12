@@ -72,10 +72,14 @@ EOF
 done
 
 # Extra for accessory containers
-entries=( $(ls -1 "${DIR}/accessory") )
-for entry in ${entries[@]}; do
-	if [[ ! -d "${DIR}/accessory/${entry}/s6/gowowcore" ]]; then
-		mkdir -p "${DIR}/accessory/${entry}/s6/gowowcore"
-	fi
-	rsync -av --delete "${DIR}/template/s6/gowowcore/." "${DIR}/accessory/${entry}/s6/gowowcore/."
+bases=('accessory' 'web')
+for base in ${bases[@]}; do
+	entries=( $(ls -1 "${DIR}/${base}") )
+	for entry in ${entries[@]}; do
+		echo "${base} - ${entry}"
+		if [[ ! -d "${DIR}/${base}/${entry}/s6/gowowcore" ]]; then
+			mkdir -p "${DIR}/${base}/${entry}/s6/gowowcore"
+		fi
+		rsync -av --delete "${DIR}/template/s6/gowowcore/." "${DIR}/${base}/${entry}/s6/gowowcore/."
+	done
 done

@@ -1,0 +1,65 @@
+#!/usr/bin/with-contenv bash
+
+# Prep persistent config folder
+if [[ -d /app/application/config && ! -L /app/application/config ]]; then
+	if [[ ! -d /config/blizzcms ]]; then
+		mkdir /config/blizzcms
+	fi
+	for item in $(ls -1 /app/application/config/); do
+		if [[ ! -e "/config/blizzcms/${item}" ]]; then
+			cp -R "/app/application/config/${item}" "/config/blizzcms/${item}"
+		fi
+	done
+	rm -R /app/application/config
+	ln -s /config/blizzcms /app/application/config
+fi
+
+
+# Fix/Configure other things
+SEARCH="\$config\['sess_save_path'\] = NULL;"
+REPLACE="\$config['sess_save_path'] = APPPATH . 'cache/session/';"
+sed -i "s${SEARCH}${REPLACE}g" /config/blizzcms/config.php
+sed -i 's%LANGUAGE%englishg' /config/blizzcms/config.php
+
+if [[ -z "${DATABASE_URL}" || -z "${AUTH_SQL}" ]]; then
+	echo "[***] DATABASE_URL or AUTH_SQL are undefined, assuming the config files are already set or migration system will be used."
+	exit 0
+fi
+
+# Configure SQL file
+
+source /gowowcore/_sql.sh
+
+SQLparseUrl "${DATABASE_URL}"
+entries=(
+"%HOSTNAME%,${SQL_HOSTNAME}"
+"%USERNAME%,${SQL_USER}"
+"%PASSWORD%,${SQL_PASSWORD}"
+"%DATABASE%,${SQL_DB}"
+)
+for entry in ${entries[@]}; do
+	SEARCH=$(echo ${entry} | cut -d',' -f1)
+	REPLACE=$(echo ${entry} | cut -d',' -f2-)
+	if [[ -n "${REPLACE}" ]]; then
+		sed -i "s${SEARCH}${REPLACE}g" /config/blizzcms/database.php
+	fi
+done
+
+SQLparseUrl "${AUTH_SQL}"
+entries=(
+"%HOSTNAME2%,${SQL_HOSTNAME}"
+"%USERNAME2%,${SQL_USER}"
+"%PASSWORD2%,${SQL_PASSWORD}"
+"%DATABASE2%,${SQL_DB}"
+)
+for entry in ${entries[@]}; do
+	SEARCH=$(echo ${entry} | cut -d',' -f1)
+	REPLACE=$(echo ${entry} | cut -d',' -f2-)
+	if [[ -n "${REPLACE}" ]]; then
+		sed -i "s${SEARCH}${REPLACE}g" /config/blizzcms/database.php
+	fi
+done
+
+if [[ -d /app/migration ]]; then
+	rm -R app/migration
+fi

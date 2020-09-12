@@ -81,7 +81,7 @@ function SQLexistTable {
 }
 
 function SQLparseUrl {
-	DATA="${1}"
+	DATA=$(echo ${1} | tr -d '"' )
 	sql_regex="^mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.*)$"
         if [[ ${DATA} =~ $sql_regex ]]; then
                 SQL_HOSTNAME=${BASH_REMATCH[3]}
