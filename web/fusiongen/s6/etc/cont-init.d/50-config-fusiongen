@@ -1,0 +1,14 @@
+#!/usr/bin/with-contenv bash
+# Prep persistent config folder
+if [[ -d /app/application/config && ! -L /app/application/config ]]; then
+	if [[ ! -d /config/fusiongen ]]; then
+		mkdir /config/fusiongen
+	fi
+	for item in $(ls -1 /app/application/config/); do
+		if [[ ! -e "/config/fusiongen/${item}" ]]; then
+			cp -R "/app/application/config/${item}" "/config/fusiongen/${item}"
+		fi
+	done
+	rm -R /app/application/config
+	ln -s /config/fusiongen /app/application/config
+fi

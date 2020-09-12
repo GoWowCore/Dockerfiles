@@ -1,0 +1,17 @@
+version: "2.1"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - "./config:/config"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      # mysql://user:password@host:port/database
+      DATABASE_URL: "${DATABASE_URL}"
+      AUTH_SQL: "${AUTH_SQL}"
