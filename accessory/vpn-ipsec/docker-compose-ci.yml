@@ -1,0 +1,9 @@
+version: '3'
+## Based on https://github.com/hwdsl2/docker-ipsec-vpn-server
+
+services:
+  vpn:
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    image: docker.pkg.github.com/gowowcore/dockerfiles/vpn-ipsec:latest
