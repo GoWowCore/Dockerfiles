@@ -22,7 +22,7 @@ services:
         FAMILY: "${FAMILY}"
         PLAYERBOTS: "${PLAYERBOTS}"
         GAMEBUILD: "${GAMEBUILD}"
-    image: "gowowcore-${CORE}-authserver:latest"
+    image: "ghcr.io/gowowcore/${IMAGE}:latest"
     restart: always
     depends_on:
     - db
@@ -47,7 +47,7 @@ services:
         FAMILY: "${FAMILY}"
         PLAYERBOTS: "${PLAYERBOTS}"
         GAMEBUILD: "${GAMEBUILD}"
-    image: "gowowcore-${CORE}-worldserver:latest"
+    image: "ghcr.io/gowowcore/${IMAGE}:latest"
     restart: always
     depends_on:
     - db

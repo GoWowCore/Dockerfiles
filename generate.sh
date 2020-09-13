@@ -55,8 +55,10 @@ for entry in ${targets[@]}; do
 			filename=$(basename ${x})
 			ln -s ../template/${filename} "${FOLDER}/${filename}"
 		done
+		IMAGE=$(basename ${FOLDER})
 
 		cat << EOF > "${FOLDER}/.env"
+IMAGE=${IMAGE}
 CORE=${CORE}
 GAMEBUILD=${GAMEBUILD}
 EOF
@@ -66,7 +68,6 @@ EOF
 		if [[ "${PLAYERBOTS}" == "1" ]]; then
 			echo "PLAYERBOTS=${PLAYERBOTS}" >> "${FOLDER}/.env"
 		fi
-
 
 	fi
 done

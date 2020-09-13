@@ -33,4 +33,6 @@ jobs:
       run: |
         cd ${{ matrix.pack }}
         docker login docker.pkg.github.com -u "${{ secrets.USER }}" -p "${{ secrets.GITHUB_TOKEN }}" &> /dev/null
+        docker login ghcr.io -u "${{ secrets.USER }}" -p "${{ secrets.CR_PAT }}" &> /dev/null
         docker-compose -f docker-compose-ci.yml build
+        if [[ $? -eq 0 ]]; then docker-compose -f docker-compose-ci.yml push worldserver ; fi
