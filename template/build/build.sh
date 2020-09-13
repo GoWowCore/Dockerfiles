@@ -3,11 +3,57 @@ set -e
 mkdir /src
 mkdir /src/build
 
+function gclone {
+	REPO=""
+	DEST=""
+	BRANCH=""
+	COMMIT=""
+	while [ -n "${1}" ]; do
+		case "${1}" in
+			"--repo")
+				REPO="${2}"
+				shift
+				;;
+			"--dest")
+				DEST="${2}"
+				shift
+				;;
+			"--branch")
+				BRANCH="${2}"
+				shift
+				;;
+			"--commit")
+				COMMIT="${2}"
+				;;
+		esac
+		shift
+	done
+	if [[ -z "${BRANCH}" && -z "${COMMIT}" ]]; then
+		git clone --single-branch --recursive --depth 1 "${REPO}" "${DEST}"
+	elif [[ -n "${BRANCH}" && -z "${COMMIT}" ]]; then
+		git clone --single-branch -b "${BRANCH}" --recursive --depth 1 "${REPO}" "${DEST}"
+	elif [[ -n "${COMMIT}" ]]; then
+		mkdir "${DEST}"
+		OPWD=${PWD}
+		cd "${DEST}"
+		git init
+		git remote add origin "${REPO}"
+		git fetch origin "${COMMIT}"
+		git reset --hard FETCH_HEAD
+		git submodule update --init --recursive
+		cd ${OPWD}
+	fi
+}
+
 case "${CORE}" in
 	"mangos")
 		# Clone
-		git clone --single-branch --recursive --depth 1 https://github.com/mangos${FAMILY}/server.git /src/server
-		git clone --single-branch --recursive --depth 1 https://github.com/mangos${FAMILY}/database.git /src/db
+		SERVER_ARGS=("--repo" "https://github.com/mangos${FAMILY}/server.git" "--dest" "/src/server")
+		if [[ -n "${GIT_COMMIT}" ]]; then
+			SERVER_ARGS+=("--commit" "${GIT_COMMIT}")
+		fi
+		gclone ${SERVER_ARGS[@]}
+		gclone --repo "https://github.com/mangos${FAMILY}/database.git" --dest "/src/db"
 		cd /src/server/dep && git pull origin master && git checkout master
 
 		# Build
@@ -25,19 +71,22 @@ case "${CORE}" in
 		;;
 
 	"trinitycore")
+		SERVER_ARGS=("--dest" "/src/server")
 		case "${FAMILY}" in
 			"spp")
-				# Clone
-				git clone --single-branch -b 3.3.5-npcbots --depth 1 https://github.com/conan513/SingleCore_TC.git /src/server
+				SERVER_ARGS+=("--repo" "https://github.com/conan513/SingleCore_TC.git" "--branch" "3.3.5-npcbots")
 				;;
 			"cata")
-				git clone --single-branch -b master --depth 1 https://github.com/The-Cataclysm-Preservation-Project/TrinityCore.git /src/server
+				SERVER_ARGS+=("--repo" "https://github.com/The-Cataclysm-Preservation-Project/TrinityCore.git" "--branch" "master")
 				;;
 			*)
-				# Clone
-				git clone --single-branch -b 3.3.5 --depth 1 https://github.com/TrinityCore/TrinityCore.git /src/server
+				SERVER_ARGS+=("--repo" "https://github.com/TrinityCore/TrinityCore.git" "--branch" "3.3.5")
 				;;
 		esac
+		if [[ -n "${GIT_COMMIT}" ]]; then
+			SERVER_ARGS+=("--commit" "${GIT_COMMIT}")
+		fi
+		gclone ${SERVER_ARGS[@]}
 
 		# Build
 		cd /src/build
@@ -72,7 +121,11 @@ case "${CORE}" in
 
 	"ashamane")
 		# Clone
-		git clone --single-branch -b legion --depth 1 https://github.com/AshamaneProject/AshamaneCore.git /src/server
+		SERVER_ARGS=("--repo" "https://github.com/AshamaneProject/AshamaneCore.git" "--dest" "/src/server" "--branch" "legion")
+		if [[ -n "${GIT_COMMIT}" ]]; then
+			SERVER_ARGS+=("--commit" "${GIT_COMMIT}")
+		fi
+		gclone ${SERVER_ARGS[@]}
 
 		# Build
 		cd /src/build
@@ -94,7 +147,11 @@ case "${CORE}" in
 
 	"azerothcore")
 		# Clone
-		git clone --single-branch -b master https://github.com/azerothcore/azerothcore-wotlk.git /src/server
+		SERVER_ARGS=("--repo" "https://github.com/azerothcore/azerothcore-wotlk.git" "--dest" "/src/server" "--branch" "master")
+		if [[ -n "${GIT_COMMIT}" ]]; then
+			SERVER_ARGS+=("--commit" "${GIT_COMMIT}")
+		fi
+		gclone ${SERVER_ARGS[@]}
 
 		# Build
 		cd /src/build
