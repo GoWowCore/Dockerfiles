@@ -87,10 +87,22 @@ if [[ ! -d /config/mmaps ]]; then
 fi
 
 # Cleanup
-for x in 'dbc' 'maps' 'vmaps' 'mmaps' 'Buildings'; do
+entries=(
+'dbc'
+'maps'
+'vmaps'
+'mmaps'
+'Buildings'
+'MoveMapGen.log'
+'MoveMapGen_detailed.log'
+)
+for x in ${entries[@]}; do
 	if [[ -d /wow/${x} ]]; then
 		echo "[***] Cleaning up ${x} from /wow folder"
 		rm -R /wow/${x}
+	elif [[ -e /wow/${x} ]]; then
+		echo "[***] Cleaning up ${x} from /wow folder"
+		rm /wow/${x}
 	fi
 done
 
