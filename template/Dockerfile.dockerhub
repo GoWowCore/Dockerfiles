@@ -48,6 +48,7 @@ ENV \
     WORLDSERVER="false" \
     WORLDSERVER_CONFIGFILE="worldserver.conf" \
     WORLDSERVER_AH_CONFIGFILE="ahbot.conf" \
+    WORLDSERVER_PB_CONFIGFILE="aiplayerbot.conf" \
     WORLDSERVER_ADDRESS="0.0.0.0" \
     WORLDSERVER_PORT="8085"
 

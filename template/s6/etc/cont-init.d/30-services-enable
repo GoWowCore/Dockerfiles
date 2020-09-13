@@ -61,17 +61,28 @@ if [[ "${WORLDSERVER}" == "true" ]]; then
 		done
 		ln -s "/config/${WORLDSERVER_CONFIGFILE}" /app/etc/mangosd.conf
 		ln -s "/config/${WORLDSERVER_AH_CONFIGFILE}" /app/etc/ahbot.conf
-
 	else
 		echo "[***] WORLDSERVER: Could not determine worldserver/mangosd"
 		exit 1
+	fi
+	# Playerbots config
+	if [[ -e /app/etc/aiplayerbot.conf.dist ]]; then
+		if [[ ! -e "/config/${WORLDSERVER_PB_CONFIGFILE}" ]]; then
+			cp /app/etc/aiplayerbot.conf.dist "/config/${WORLDSERVER_PB_CONFIGFILE}"
+		fi
+		for cfg_file in 'aiplayerbot.conf'; do
+			if [[ -e /app/etc/${cfg_file} ]]; then
+				rm /app/etc/${cfg_file}
+			fi
+		done
+		ln -s "/config/${WORLDSERVER_PB_CONFIGFILE}" /app/etc/aiplayerbot.conf
 	fi
 else
 	touch /etc/services.d/worldserver/down
 fi
 
 # Set directories
-for x in "/config/${AUTHSERVER_CONFIGFILE}" "/config/${WORLDSERVER_CONFIGFILE}" "/config/${WORLDSERVER_AH_CONFIGFILE}"; do
+for x in "/config/${AUTHSERVER_CONFIGFILE}" "/config/${WORLDSERVER_CONFIGFILE}" "/config/${WORLDSERVER_AH_CONFIGFILE}" "/config/${WORLDSERVER_PB_CONFIGFILE}"; do
 	if [[ -e "${x}" ]]; then
 		for entry in 'DataDir,/config' 'LogsDir,/config' 'SourceDirectory,/src/server'; do
 			CONF_PARAM=${entry%,*}
