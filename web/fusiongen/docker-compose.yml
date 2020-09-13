@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ghcr.io/gowowcore/web-fusiongen:latest
     restart: always
     ports:
       - "80:80"
