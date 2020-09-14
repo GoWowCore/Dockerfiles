@@ -12,3 +12,7 @@ if [[ -d /app/application/config && ! -L /app/application/config ]]; then
 	rm -R /app/application/config
 	ln -s /config/fusiongen /app/application/config
 fi
+
+if [[ -e /config/database.php ]]; then
+	touch /app/install/.lock
+fi
