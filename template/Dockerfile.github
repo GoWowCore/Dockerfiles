@@ -1,5 +1,5 @@
 # Build phase
-FROM docker.pkg.github.com/gowowcore/dockerfiles/base-build:latest as build
+FROM ghcr.io/gowowcore/base-build:latest as build
 
 ARG CORE
 ARG FAMILY=none
@@ -18,7 +18,7 @@ RUN \
     chown -R 911:911 /src /app
 
 # Resulting image phase
-FROM docker.pkg.github.com/gowowcore/dockerfiles/base-prod:latest as prod
+FROM ghcr.io/gowowcore/base-prod:latest as prod
 
 ARG CORE
 ARG FAMILY=none

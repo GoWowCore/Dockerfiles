@@ -1,0 +1,36 @@
+name: base
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pack:
+        - base
+
+    steps:
+    - name: Git checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Setup Docker
+      uses: docker-practice/actions-setup-docker@master
+      with:
+        docker_version: 19.03
+        docker_channel: stable
+
+    - name: Grab docker-compose
+      run: |
+        sudo curl -s -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+
+    - name: Build container
+      run: |
+        cd ${{ matrix.pack }}
+        docker login docker.pkg.github.com -u "${{ secrets.USER }}" -p "${{ secrets.GITHUB_TOKEN }}" &> /dev/null
+        docker login ghcr.io -u "${{ secrets.USER }}" -p "${{ secrets.CR_PAT }}" &> /dev/null
+        docker-compose -f docker-compose-ci.yml build
+        if [[ $? -eq 0 ]]; then docker-compose -f docker-compose-ci.yml push ; fi
